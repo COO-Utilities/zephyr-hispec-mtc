@@ -1,0 +1,8 @@
+description: TI TPS55287-Q1 36V, 4A Buck-Boost Converter
+compatible: ti,tps55287q1
+include: i2c-device.yaml
+
+properties:
+  reg:
+    required: true
+    description: I2C Address (0x74 or 0x75 depending on MODE pin wiring)

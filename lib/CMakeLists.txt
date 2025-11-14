@@ -1,1 +1,1 @@
-add_subdirectory_ifdef(CONFIG_EXAMPLE example)
+# add_subdirectory_ifdef(CONFIG_EXAMPLE example)
