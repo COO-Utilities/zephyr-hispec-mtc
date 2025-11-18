@@ -1,5 +1,0 @@
-menu "Custom libraries"
-
-rsource "example/Kconfig"
-
-endmenu
