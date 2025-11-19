@@ -6,6 +6,9 @@
 # You can browse these options using the west targets menuconfig (terminal) or
 # guiconfig (GUI).
 
+# Source workspace libraries
+osource "$(ZEPHYR_BASE)/../zephyr-hispec-mtc/lib/Kconfig"
+
 menu "Zephyr"
 source "Kconfig.zephyr"
 endmenu
