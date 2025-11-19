@@ -1,0 +1,21 @@
+/*
+ * Devicetree overlay for NUCLEO-H563ZI:
+ * - AD7124 ADC on SPI1
+ */
+
+&spi1 {
+    status = "okay";
+    pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pg9 &spi1_mosi_pb5>;
+    pinctrl-names = "default";
+    cs-gpios = <&gpiod 14 GPIO_ACTIVE_LOW>;
+
+    ad7124: ad7124@0 {
+        compatible = "adi,ad7124";
+        reg = <0>;
+        spi-max-frequency = <5000000>;  /* 5 MHz max for AD7124 */
+        spi-cpol;
+        spi-cpha;
+        frame-format = <0>;  /* SPI_FRAME_FORMAT_TI = 0 (standard SPI) */
+        spi-interframe-delay-ns = <0>;
+    };
+};
