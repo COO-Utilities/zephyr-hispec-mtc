@@ -51,6 +51,10 @@ jobs:
         run: |
           west zephyr-export
 
+      - name: Install Zephyr Python dependencies
+        run: |
+          west packages pip --install
+
       - name: Build firmware
         working-directory: ${{ env.APP_DIR }}
         run: |
