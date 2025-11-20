@@ -57,3 +57,36 @@
 #             EXTRA_TWISTER_FLAGS="--short-build-path -O/tmp/twister-out"
 #           fi
 #           west twister -T tests -v --inline-logs --integration $EXTRA_TWISTER_FLAGS
+
+name: Build for zephyr-hispec-mtc
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/zephyrproject-rtos/zephyr-build:latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Initialize west workspace
+        runs: |
+          west update
+
+      - name: Build firmware
+        runs: |
+          west build -b nucleo_h563zi app
+
+      - name: Upload zephyr.bin
+        uses: actions/upload-artifact@v4
+        with:
+          name: zephyr-firmware
+          path: build/zephyr/zephyr*.bin
