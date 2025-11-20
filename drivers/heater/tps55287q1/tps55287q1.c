@@ -61,7 +61,7 @@ static const struct heater_driver_api tps55287q1_driver_api = {
         &tps55287q1_data_##inst,                                                \
         &tps55287q1_config_##inst,                                              \
         POST_KERNEL,                                                            \
-        CONFIG_HEATER_INIT_PRIORITY,                                            \
+        CONFIG_TPS55287Q1_INIT_PRIORITY,                                        \
         &tps55287q1_driver_api                                                  \
     );                                                                          \
 
