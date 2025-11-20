@@ -41,12 +41,13 @@ jobs:
           west init -l .
           west update
           west zephyr-export
+          west packages pip --install
 
       - name: Build Zephyr app
         working-directory: ${{ env.APP_DIR }}
         run: |
-          west build -b "$BOARD" --pristine
-
+          west build -b "$BOARD"
+          
       - name: Archive build artifacts
         if: success()
         uses: actions/upload-artifact@v4
