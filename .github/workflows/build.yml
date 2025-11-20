@@ -39,6 +39,14 @@ jobs:
           west init -l .
           west update
 
+      - name: Install Zephyr SDK
+        run: |
+          ZEPHYR_SDK_VERSION=0.17.4
+          mkdir -p "$ZEPHYR_SDK_INSTALL_DIR"
+          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz
+          tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz -C "$ZEPHYR_SDK_INSTALL_DIR" --strip-components=1
+          "$ZEPHYR_SDK_INSTALL_DIR"/setup.sh -t arm-zephyr-eabi -c
+
       - name: Export Zephyr CMake package
         run: |
           west zephyr-export
