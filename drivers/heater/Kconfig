@@ -1,0 +1,15 @@
+menuconfig HEATER
+    bool "Heater drivers"
+    default n
+    help
+        Include heater drivers in system config
+
+if HEATER
+
+module = HEATER
+module-str = heater
+source "subsys/logging/Kconfig.template.log_config"
+
+rsource "tps55287q1/Kconfig"
+
+endif # HEATER
