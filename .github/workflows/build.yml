@@ -8,25 +8,61 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    container:
-      image: ghcr.io/zephyrproject-rtos/zephyr-build:latest
+    env:
+      ZEPHYR_SDK_INSTALL_DIR: ${{ github.workspace }}/zephyr-sdk
+      BOARD: nucleo_h563zi
+      APP_DIR: app
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      
-      - name: Initialize west workspace
+
+      - name: Install system dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git cmake ninja-build gperf ccache \
+            dfu-util device-tree-compiler \
+            python3-dev python3-pip python3-setuptools \
+            python3-tk python3-wheel xz-utils file \
+            make gcc-multilib
+
+      - name: Install Python dependencies for Zephyr
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install west
+      
+      - name: Initialize Zephyr workspace
+        run: |
+          west init -l .
           west update
 
-      - name: Build firmware
+      - name: Install Zephyr SDK
         run: |
-          west build -b nucleo_h563zi app
+          ZEPHYR_SDK_VERSION=0.17.4
+          mkdir -p "$ZEPHYR_SDK_INSTALL_DIR"
+          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz
+          tar xf zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64.tar.xz -C "$ZEPHYR_SDK_INSTALL_DIR" --strip-components=1
+          "$ZEPHYR_SDK_INSTALL_DIR"/setup.sh -t arm-none-eabi -c
 
-      - name: Upload zephyr.bin
+      - name: Export Zephyr CMake package
+        run: |
+          west zephyr-export
+
+      - name: Build firmware
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          west build -b "$BOARD" --pristine
+
+      - name: Archive build artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: zephyr-firmware
-          path: build/zephyr/zephyr*.bin
+          name: zephyr-build-${{ env.BOARD }}
+          path: |
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.elf
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.bin
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.hex
+          if-no-files-found: ignore
