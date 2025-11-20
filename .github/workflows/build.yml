@@ -42,9 +42,13 @@ jobs:
           west update
           west zephyr-export
 
-      - name: Install Zephyr Python dependencies
+      - name: Set ZEPHYR_BASE env
         run: |
-          pip install -r zephyr/scripts/requirements.txt
+          echo "ZEPHYR_BASE=$(west topdir)/zephyr" >> $GITHUB_ENV
+      
+      - name: Install Zephyr Python requirements
+        run: |
+          pip install -r "$ZEPHYR_BASE/scripts/requirements.txt"
 
       - name: Build Zephyr app
         working-directory: ${{ env.APP_DIR }}
