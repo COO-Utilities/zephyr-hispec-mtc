@@ -59,9 +59,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: zephyr-build-${{ env.BOARD }}
+          name: zephyr-hispec-mtc-firmware
           path: |
-            ${{ env.APP_DIR }}/build/zephyr/zephyr.elf
-            ${{ env.APP_DIR }}/build/zephyr/zephyr.bin
-            ${{ env.APP_DIR }}/build/zephyr/zephyr.hex
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.*
           if-no-files-found: ignore
