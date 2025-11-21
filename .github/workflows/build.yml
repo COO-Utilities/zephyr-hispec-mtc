@@ -61,5 +61,7 @@ jobs:
         with:
           name: zephyr-hispec-mtc-firmware
           path: |
-            ${{ env.APP_DIR }}/build/zephyr/zephyr.*
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.elf
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.bin
+            ${{ env.APP_DIR }}/build/zephyr/zephyr.hex
           if-no-files-found: ignore
