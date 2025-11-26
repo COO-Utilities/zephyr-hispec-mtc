@@ -1,3 +1,0 @@
-description: Analog Devices AD7124 24-bit Sigma-Delta ADC
-compatible: "adi,ad7124"
-include: [spi-device.yaml]
