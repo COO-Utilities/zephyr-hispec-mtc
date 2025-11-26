@@ -1,2 +1,6 @@
+menu "zephyr-hispec-mtc"
+
 rsource "drivers/Kconfig"
 rsource "lib/Kconfig"
+
+endmenu
