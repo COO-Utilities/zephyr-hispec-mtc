@@ -13,4 +13,3 @@ manifest:
       import:
         name-allowlist:
           - hal_stm32  # required by the nucleo_h563zi board (STM32 based)
-          - cmsis_6    # CMSIS Core v6
