@@ -1,1 +1,1 @@
-add_subdirectory(regulator)
+add_subdirectory_ifdef(CONFIG_HEATER heater)
