@@ -1,0 +1,45 @@
+description: TI TPS55287-Q1 36V, 4A Buck-Boost Converter
+compatible: ti,tps55287q1
+include:
+  - i2c-device.yaml
+  - regulator.yaml
+
+properties:
+  reg:
+    required: true
+    description: I2C Address (0x74 or 0x75 depending on MODE pin wiring)
+
+  rsense-milliohm:
+    type: int
+    required: false
+    description: |
+      Sense resistor between ISP and ISN in milliohms, used for current-limit calculations.
+
+  intfb:
+    type: int
+    required: false
+    description: |
+      Internal feedback ratio (0..3) corresponding to INTFB bits.
+      0: 0.2256, 1: 0.1128, 2: 0.0752, 3: 0.0564.
+
+  default-vout-mv:
+    type: int
+    required: false
+    description: |
+      Optional default output voltage at boot (mV). Driver will program this in init() when used as a regulator.
+  
+  default-current-limit-ma:
+    type: int
+    required: false
+    description: |
+      Optional default current limit in mA. Requires rsense-milliohm to be set.
+
+  enable-at-boot:
+    type: boolean
+    description: |
+      If true, driver will enable OE during init().
+
+  fpwm:
+    type: boolean
+    description: |
+      If true, prefer FPWM mode at light load. If not set, PFM is used.

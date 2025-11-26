@@ -11,5 +11,15 @@
         compatible = "ti,tps55287q1";
         status = "okay";
         reg = <0x74>;
+        rsense-milliohm = <20>;
+        intfb = <3>;
+        enable-at-boot;
+        default-vout-mv = <5000>;
+        default-current-limit-ma = <3000>;
+
+        regulator-name = "tps55287q1-test";
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        regulator-boot-on;
     };
 };

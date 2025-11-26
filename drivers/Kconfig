@@ -1,3 +1,7 @@
-menu "Drivers"
-rsource "heater/Kconfig"
+menu "Custom drivers"
+
+if REGULATOR
+rsource "regulator/Kconfig"
+endif
+
 endmenu

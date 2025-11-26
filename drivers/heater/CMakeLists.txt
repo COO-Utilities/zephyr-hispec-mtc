@@ -1,1 +1,0 @@
-add_subdirectory_ifdef(CONFIG_TPS55287Q1 tps55287q1)
