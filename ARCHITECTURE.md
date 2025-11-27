@@ -148,66 +148,6 @@ sequenceDiagram
     end
 ```
 
-## File Structure
-
-```mermaid
-graph LR
-    subgraph "app/"
-        APP_MAIN[src/main.c]
-        APP_OVERLAY[boards/nucleo_h563zi.overlay]
-        APP_CONF[prj.conf]
-        APP_KCONFIG[Kconfig]
-    end
-
-    subgraph "lib/"
-        subgraph "config/"
-            CONFIG_H[config.h]
-            CONFIG_C[config.c]
-        end
-
-        subgraph "sensors/"
-            SENSOR_MGR_H[sensor_manager.h]
-            SENSOR_MGR_C[sensor_manager.c]
-            ADC_H[adc_temp_sensor.h]
-            ADC_C[adc_temp_sensor.c]
-        end
-
-        subgraph "heaters/"
-            HEATER_MGR_H[heater_manager.h]
-            HEATER_MGR_C[heater_manager.c]
-        end
-
-        subgraph "control/"
-            LOOP_H[control_loop.h]
-            LOOP_C[control_loop.c]
-        end
-
-        subgraph "coo_commons/"
-            PID_H[pid.h]
-            PID_C[pid.c]
-        end
-    end
-
-    subgraph "include/"
-        COMMON_H[coo_commons/*.h]
-    end
-
-    APP_MAIN -->|uses| CONFIG_H
-    APP_MAIN -->|uses| SENSOR_MGR_H
-    APP_MAIN -->|uses| HEATER_MGR_H
-    APP_MAIN -->|uses| LOOP_H
-
-    SENSOR_MGR_C -->|uses| CONFIG_H
-    SENSOR_MGR_C -->|uses| ADC_C
-
-    HEATER_MGR_C -->|uses| CONFIG_H
-
-    LOOP_C -->|uses| CONFIG_H
-    LOOP_C -->|uses| SENSOR_MGR_H
-    LOOP_C -->|uses| HEATER_MGR_H
-    LOOP_C -->|uses| PID_C
-```
-
 ## Data Flow - Temperature Control
 
 ```mermaid
