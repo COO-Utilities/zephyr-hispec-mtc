@@ -12,7 +12,8 @@ build*
 
 __pycache__/
 
+# IDE
+.idea
+
 # docs
 /doc/_build*
-
-.idea
