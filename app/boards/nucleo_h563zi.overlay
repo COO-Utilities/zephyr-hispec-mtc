@@ -30,7 +30,7 @@
         compatible = "ti,tps55287q1";
         reg = <0x74>;
 
-        ti,intfb = <3>;
+        intfb = <3>;
 
         regulator-min-microvolt = <800000>;     /* 0.8 V */
         regulator-max-microvolt = <20000000>;   /* 20 V */

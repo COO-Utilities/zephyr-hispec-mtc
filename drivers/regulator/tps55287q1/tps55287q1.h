@@ -17,9 +17,17 @@
 #define TPS55287Q1_REG_MODE                 0x06
 #define TPS55287Q1_REG_STATUS               0x07
 
+/* IOUT_LIMIT (02h) register bits */
+#define TPS55287Q1_IOUT_LIMIT_CURRENT_LIMIT_EN     		BIT(7)
+#define TPS55287Q1_IOUT_LIMIT_CURRENT_LIMIT_SETTINGS	GENMASK(6, 0)
+
+/* VOUT_SR (03h) register bits */
+#define TPS55287Q1_VOUT_SR_OCP_DELAY		GENMASK(5, 4)
+#define TPS55287Q1_VOUT_SR_SR				GENMASK(1, 0)
+
 /* VOUT_FS (04h) register bits */
-#define TPS55287Q1_VOUT_FS_FB_BIT           BIT(7)
-#define TPS55287Q1_VOUT_FS_INTFB_MASK       GENMASK(1, 0)
+#define TPS55287Q1_VOUT_FS_FB           	BIT(7)
+#define TPS55287Q1_VOUT_FS_INTFB			GENMASK(1, 0)
 
 /*
  * Simple linear mapping of VOUT vs REF DAC for internal feedback
@@ -33,17 +41,30 @@
  * We model this as: VOUT = 0.8 V + code * step, code in [0, max_code].
  */
 
+/* CDC (05h) register bits */
+#define TPS55287Q1_CDC_SC_MASK		    	BIT(7)
+#define TPS55287Q1_CDC_OCP_MASK		    	BIT(6)
+#define TPS55287Q1_CDC_OVP_MASK		    	BIT(5)
+#define TPS55287Q1_CDC_CDC_OPTION		    BIT(3)
+#define TPS55287Q1_CDC_CDC		    		GENMASK(2, 0)
+
 /* MODE (06h) register bits */
-#define TPS55287Q1_MODE_OE_BIT              BIT(7)
-#define TPS55287Q1_MODE_DISCHG_BIT          BIT(4)
-#define TPS55287Q1_MODE_FORCE_DISCHG_BIT    BIT(3)
-#define TPS55287Q1_MODE_FPWM_BIT            BIT(1)
+#define TPS55287Q1_MODE_OE					BIT(7)
+#define TPS55287Q1_MODE_FSWDBL        		BIT(6)
+#define TPS55287Q1_MODE_HICCUP        		BIT(5)
+#define TPS55287Q1_MODE_DISCHG				BIT(4)
+#define TPS55287Q1_MODE_FORCE_DISCHG		BIT(3)
+#define TPS55287Q1_MODE_FPWM				BIT(1)
+
+/* STATUS (07h) register bits */
+#define TPS55287Q1_STATUS_SCP		    	BIT(7)
+#define TPS55287Q1_STATUS_OCP		    	BIT(6)
+#define TPS55287Q1_STATUS_OVP		    	BIT(5)
+#define TPS55287Q1_STATUS_STATUS		    GENMASK(1, 0)
 
 struct tps55287q1_config {
 	struct regulator_common_config common;
 	struct i2c_dt_spec i2c;
-	struct gpio_dt_spec enable_gpio;
-	bool has_enable_gpio;
 	uint8_t intfb;
 };
 

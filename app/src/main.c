@@ -22,12 +22,12 @@ int main(void) {
         return 0;
     }
 
-    /* Example: set 12 V */
-    ret = regulator_set_voltage(reg, 12000000, 12000000);
-    if (ret < 0) {
-        LOG_ERR("regulator_set_voltage() failed: %d", ret);
-        return 0;
-    }
+    // /* Example: set 12 V */
+    // ret = regulator_set_voltage(reg, 12000000, 12000000);
+    // if (ret < 0) {
+    //     LOG_ERR("regulator_set_voltage() failed: %d", ret);
+    //     return 0;
+    // }
 
     int32_t v;
     ret = regulator_get_voltage(reg, &v);
@@ -35,7 +35,7 @@ int main(void) {
         LOG_INF("VOUT now ~%d mV", (int)(v / 1000));
     }
 
-    while (1) {
-        k_sleep(K_SECONDS(1));
-    }
+    // while (1) {
+    //     k_sleep(K_SECONDS(1));
+    // }
 }

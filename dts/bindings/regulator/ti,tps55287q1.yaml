@@ -12,7 +12,10 @@ include:
 on-bus: i2c
 
 properties:
-  ti,intfb:
+  reg:
+      required: true
+      
+  intfb:
     type: int
     required: false
     default: 3
