@@ -1,7 +1,5 @@
-# Copyright (c) 2021 Nordic Semiconductor ASA
-# SPDX-License-Identifier: Apache-2.0
+menu "Custom Drivers"
 
-menu "Drivers"
-# rsource "blink/Kconfig"
-# rsource "sensor/Kconfig"
+source "drivers/regulator"
+
 endmenu

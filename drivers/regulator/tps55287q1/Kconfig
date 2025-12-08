@@ -1,0 +1,7 @@
+config TPS55287Q1
+    bool "TI TPS55287-Q1 buck-boost regulator"
+    depends on I2C && REGULATOR
+    help
+      Enable support for the TI TPS55287-Q1 36-V, 4-A synchronous
+      buck-boost converter with I2C interface, exposed as a regulator
+      using the Zephyr regulator API.
