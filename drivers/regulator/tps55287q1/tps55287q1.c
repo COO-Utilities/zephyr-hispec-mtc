@@ -390,7 +390,7 @@ static int tps55287q1_init(const struct device *dev) {
 			      &tps55287q1_data_##inst,                                      \
 			      &tps55287q1_config_##inst,                                    \
 			      POST_KERNEL,                                                  \
-                  CONFIG_REGULATOR_INIT_PRIORITY,                               \
+                  CONFIG_REGULATOR_TPS55287Q1_INIT_PRIORITY,                    \
 			      &tps55287q1_regulator_api);
 
 DT_INST_FOREACH_STATUS_OKAY(TPS55287Q1_INIT);

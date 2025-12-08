@@ -1,7 +1,14 @@
-config TPS55287Q1
+config REGULATOR_TPS55287Q1
     bool "TI TPS55287-Q1 buck-boost regulator"
-    depends on I2C && REGULATOR
+    depends on DT_HAS_TI_TPS55287Q1_ENABLED && I2C && REGULATOR
     help
       Enable support for the TI TPS55287-Q1 36-V, 4-A synchronous
       buck-boost converter with I2C interface, exposed as a regulator
       using the Zephyr regulator API.
+    
+config REGULATOR_TPS55287Q1_INIT_PRIORITY
+    int "TPS55287-Q1 init priority"
+    depends on REGULATOR_TPS55287Q1
+    default 70
+    help
+      Initialization priority for TPS55287-Q1 regulator driver.

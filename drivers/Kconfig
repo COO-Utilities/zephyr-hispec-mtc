@@ -1,5 +1,7 @@
 menu "Custom Drivers"
 
-source "drivers/regulator"
+if REGULATOR
+rsource "regulator/Kconfig"
+endif
 
 endmenu

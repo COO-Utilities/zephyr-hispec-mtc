@@ -12,7 +12,7 @@ include:
 on-bus: i2c
 
 properties:
-  intfb:
+  ti,intfb:
     type: int
     required: false
     default: 3
@@ -30,13 +30,3 @@ properties:
       3: 0.0564  -> VOUT range 0.8 V .. 20 V,  ~10 mV step (datasheet default)
 
       The driver uses this to translate between VOUT (microvolts) and the REF DAC code in registers 00h/01h.
-
-  regulator-active-discharge:
-    type: boolean
-    required: false
-    description: |
-      If present, enable VOUT discharge in shutdown (DISCHG bit in MODE).
-      This maps to the regulator API "active discharge" setting.
-
-required:
-  - reg
