@@ -10,7 +10,7 @@
 
 #include "tps55287q1.h"
 
-LOG_MODULE_REGISTER(tps55287q1, CONFIG_REGULATOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(tps55287q1, CONFIG_REGULATOR_TPS55287Q1_LOG_LEVEL);
 
 static int tps55287q1_reg_read(const struct tps55287q1_config *cfg, uint8_t reg, uint8_t *val) {
 	return i2c_reg_read_byte_dt(&cfg->i2c, reg, val);

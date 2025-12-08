@@ -12,3 +12,16 @@ config REGULATOR_TPS55287Q1_INIT_PRIORITY
     default 70
     help
       Initialization priority for TPS55287-Q1 regulator driver.
+
+config REGULATOR_TPS55287Q1_LOG_LEVEL
+    int "TPS55287Q1 driver log level"
+    depends on REGULATOR_TPS55287Q1
+    default 3
+    range 0 4
+    help
+      Set log level for TPS55287-Q1 regulator driver.
+      0 = OFF
+      1 = ERROR
+      2 = WARNING
+      3 = INFO
+      4 = DEBUG
