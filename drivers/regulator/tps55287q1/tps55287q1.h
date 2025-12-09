@@ -66,12 +66,11 @@ struct tps55287q1_config {
 	struct regulator_common_config common;
 	struct i2c_dt_spec i2c;
 	uint8_t intfb;
+	bool force_discharge;
 };
 
 struct tps55287q1_data {
 	struct regulator_common_data common;
-	uint16_t vref_code_cached;
-	uint8_t mode_cached;
 };
 
 #endif /* ZEPHYR_DRIVERS_REGULATOR_TPS55287Q1_H_ */

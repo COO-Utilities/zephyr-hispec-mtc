@@ -14,7 +14,7 @@ on-bus: i2c
 properties:
   reg:
       required: true
-      
+
   intfb:
     type: int
     required: false
@@ -33,3 +33,10 @@ properties:
       3: 0.0564  -> VOUT range 0.8 V .. 20 V,  ~10 mV step (datasheet default)
 
       The driver uses this to translate between VOUT (microvolts) and the REF DAC code in registers 00h/01h.
+
+  force-discharge:
+    type: boolean
+    required: false
+    description: |
+      Enable force discharge on disable (MODE register 06h, bit 3).
+      When set, the output capacitor is discharged through an internal resistor when the regulator is disabled.

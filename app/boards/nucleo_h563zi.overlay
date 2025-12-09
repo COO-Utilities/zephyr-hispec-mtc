@@ -29,13 +29,13 @@
     tps55287q1: tps55287q1@74 {
         compatible = "ti,tps55287q1";
         reg = <0x74>;
+        status = "okay";
 
         intfb = <3>;
-
-        regulator-min-microvolt = <800000>;     /* 0.8 V */
-        regulator-max-microvolt = <20000000>;   /* 20 V */
-        regulator-init-microvolt = <5000000>;   /* 5 V at boot */
-        regulator-active-discharge = <1>;
-        regulator-boot-on;
+        force-discharge;
+        
+        /* Regulator common properties */
+		regulator-name = "TPS55287Q1_TEST";
+        regulator-active-discharge = <0>;
     };
 };
