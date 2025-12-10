@@ -1,0 +1,5 @@
+menu "Custom Regulator Drivers"
+
+rsource "tps55287q1/Kconfig"
+
+endmenu

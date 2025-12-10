@@ -1,0 +1,50 @@
+title: TI TPS55287-Q1 buck-boost regulator
+
+description: |
+  Texas Instruments TPS55287-Q1 Automotive 36V 4A buck-boost converter with I²C interface.
+
+compatible: "ti,tps55287q1"
+
+include:
+  - name: i2c-device.yaml
+  - name: regulator.yaml
+
+on-bus: i2c
+
+properties:
+  reg:
+      required: true
+
+  intfb:
+    type: int
+    required: false
+    default: 3
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: |
+      Internal feedback ratio (INTFB[1:0] bits in VOUT_FS register, 04h).
+
+      0: 0.2256  -> VOUT range 0.8 V .. 5 V,   ~2.5 mV step
+      1: 0.1128  -> VOUT range 0.8 V .. 10 V,  ~5 mV step
+      2: 0.0752  -> VOUT range 0.8 V .. 15 V,  ~7.5 mV step
+      3: 0.0564  -> VOUT range 0.8 V .. 20 V,  ~10 mV step (datasheet default)
+
+      The driver uses this to translate between VOUT (microvolts) and the REF DAC code in registers 00h/01h.
+
+  force-discharge:
+    type: boolean
+    required: false
+    description: |
+      Enable force discharge on disable (MODE register 06h, bit 3).
+      When set, the output capacitor is discharged through an internal resistor when the regulator is disabled.
+
+  r-sense-uohm:
+    type: int
+    required: false
+    default: 0
+    description: |
+      Sense resistor value in micro-ohms (µΩ) for current limit calculations.
+      If not specified or set to 0, the driver assumes a default value as per the datasheet.

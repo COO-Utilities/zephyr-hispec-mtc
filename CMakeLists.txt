@@ -1,1 +1,4 @@
-add_subdirectory(lib)
+if(ZEPHYR_BASE)
+    add_subdirectory(lib)
+    add_subdirectory(drivers)
+endif()

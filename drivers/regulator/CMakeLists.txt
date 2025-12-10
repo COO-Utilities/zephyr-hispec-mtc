@@ -1,0 +1,1 @@
+add_subdirectory(tps55287q1)
