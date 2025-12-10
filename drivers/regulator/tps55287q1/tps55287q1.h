@@ -67,6 +67,7 @@ struct tps55287q1_config {
 	struct i2c_dt_spec i2c;
 	uint8_t intfb;
 	bool force_discharge;
+	uint32_t r_sense_uohm;
 };
 
 struct tps55287q1_data {

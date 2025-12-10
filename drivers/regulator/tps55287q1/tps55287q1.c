@@ -158,6 +158,68 @@ static int regulator_tps55287q1_get_voltage(const struct device *dev, int32_t *v
 	return 0;
 }
 
+static int regulator_tps55287q1_set_current_limit(const struct device *dev, int32_t min_ua, int32_t max_ua) {
+	const struct tps55287q1_config *cfg = dev->config;
+
+	int ret;
+
+	int64_t target_volt_uv;
+	uint8_t code;
+
+	if (cfg->r_sense_uohm == 0) {
+		LOG_ERR("r_sense_uohm not configured for %s", dev->name);
+		return -ENOTSUP;
+	}
+
+	target_volt_uv = ((int64_t)min_ua * (int64_t)cfg->r_sense_uohm) / 1000000LL;
+
+	if (target_volt_uv < 0) {
+		target_volt_uv = 0;
+	}
+
+	code = (uint8_t)(target_volt_uv / 500);
+	if (code > 0x7F) {
+		code = 0x7F;
+	}
+
+	ret = tps55287q1_reg_write(dev, TPS55287Q1_REG_IOUT_LIMIT, code);
+	if (ret < 0) {
+		LOG_ERR("Failed to write IOUT_LIMIT register: %d", ret);
+		return ret;
+	}
+
+	LOG_DBG("Set current limit target voltage: %lld uV (0x%x) for %s", (long long)target_volt_uv, code, dev->name);
+	return 0;
+}
+
+static int regulator_tps55287q1_get_current_limit(const struct device *dev, int32_t *curr_ua) {
+	const struct tps55287q1_config *cfg = dev->config;
+
+	int ret;
+
+	uint8_t reg;
+	uint8_t code;
+	int64_t target_volt_uv;
+	double curr_limit_a;
+
+	ret = tps55287q1_reg_read(dev, TPS55287Q1_REG_IOUT_LIMIT, &reg);
+	if (ret < 0) {
+		LOG_ERR("Failed to read IOUT_LIMIT register: %d", ret);
+		return ret;
+	}
+
+	code = reg & 0x7F;
+
+	target_volt_uv = (int64_t)code * 500;
+	curr_limit_a = (double)target_volt_uv / (double)cfg->r_sense_uohm;
+
+	*curr_ua = (int32_t)(curr_limit_a * 1000000);
+
+	LOG_DBG("Current limit: %f A (%f mA) with R_sense=%u uOhm (%ld mOhm)", curr_limit_a, curr_limit_a * 1000, cfg->r_sense_uohm, (long)(cfg->r_sense_uohm / 1000));
+
+	return 0;
+}
+
 static int regulator_tps55287q1_set_active_discharge(const struct device *dev, bool active_discharge) {
 	const struct tps55287q1_config *cfg = dev->config;
 
@@ -202,6 +264,8 @@ static const struct regulator_driver_api tps55287q1_regulator_api = {
 	.disable             = regulator_tps55287q1_disable,
 	.set_voltage         = regulator_tps55287q1_set_voltage,
 	.get_voltage		 = regulator_tps55287q1_get_voltage,
+	.set_current_limit   = regulator_tps55287q1_set_current_limit,
+	.get_current_limit   = regulator_tps55287q1_get_current_limit,
 	.set_active_discharge = regulator_tps55287q1_set_active_discharge,
 	.get_active_discharge = regulator_tps55287q1_get_active_discharge,
 };
@@ -242,6 +306,7 @@ static int tps55287q1_init(const struct device *dev) {
         .i2c         = I2C_DT_SPEC_INST_GET(inst),                               	\
         .intfb       = DT_INST_PROP_OR(inst, intfb, 3),                       		\
         .force_discharge = DT_INST_PROP_OR(inst, force_discharge, false),       	\
+		.r_sense_uohm = DT_INST_PROP_OR(inst, r_sense_uohm, 0),                   	\
     };                                                                            	\
                                                                                   	\
     DEVICE_DT_INST_DEFINE(inst,                                                   	\

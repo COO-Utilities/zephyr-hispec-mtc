@@ -33,6 +33,7 @@
 
         intfb = <3>;
         force-discharge;
+        r-sense-uohm = <20000>;
         
         /* Regulator common properties */
 		regulator-name = "TPS55287Q1_TEST";

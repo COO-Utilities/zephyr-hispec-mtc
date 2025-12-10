@@ -40,3 +40,11 @@ properties:
     description: |
       Enable force discharge on disable (MODE register 06h, bit 3).
       When set, the output capacitor is discharged through an internal resistor when the regulator is disabled.
+
+  r-sense-uohm:
+    type: int
+    required: false
+    default: 0
+    description: |
+      Sense resistor value in micro-ohms (µΩ) for current limit calculations.
+      If not specified or set to 0, the driver assumes a default value as per the datasheet.
