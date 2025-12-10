@@ -15,7 +15,7 @@ west init -m https://github.com/COO-Utilities/zephyr-hispec-mtc.git --mr main my
 cd my-project && west update
 
 # Build for hardware
-west build -b nucleo_h563zi demo --pristine
+west build -b nucleo_h563zi demo/tps55287q1_dev --pristine
 west flash
 ```
 ## Links
