@@ -1,0 +1,38 @@
+/*
+ * Devicetree overlay for NUCLEO-H563ZI:
+ * - AD7124 ADC on SPI1
+ */
+
+/ {
+    aliases {
+        ad7124-test = &ad7124;
+    };
+};
+
+&spi1 {
+    status = "okay";
+
+    ad7124: ad7124@0 {
+        compatible = "adi,ad7124-adc";
+        status = "okay";
+        reg = <0>;
+        spi-max-frequency = <1000000>;
+        active-device = <1>;
+        reference-enable;
+        
+        #io-channel-cells = <1>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        channel@0 {
+            reg = <0>;
+            zephyr,gain = "ADC_GAIN_1";
+            zephyr,reference = "ADC_REF_INTERNAL";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+
+            zephyr,input-positive = <16>;
+            zephyr,input-negative = <17>;
+        };
+    };
+};
