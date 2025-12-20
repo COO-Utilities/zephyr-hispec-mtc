@@ -37,6 +37,6 @@
         
         /* Regulator common properties */
 		regulator-name = "TPS55287Q1_TEST";
-        regulator-active-discharge = <0>;
+        regulator-active-discharge = <1>;
     };
 };
