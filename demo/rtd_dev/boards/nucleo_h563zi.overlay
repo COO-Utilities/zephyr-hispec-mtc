@@ -5,7 +5,11 @@
 
 / {
     aliases {
-        ad7124-test = &ad7124;
+        rtd-test = &ad7124_ch0;
+    };
+
+    ad7124_ch0: zephyr,user {
+        io-channels = <&ad7124 0>;
     };
 };
 
@@ -18,21 +22,24 @@
         reg = <0>;
         spi-max-frequency = <1000000>;
         active-device = <1>;
-        reference-enable;
+        // reference-enable;
+        // power-mode = <0>;
+        adc-mode = <0>;
         
-        #io-channel-cells = <1>;
         #address-cells = <1>;
         #size-cells = <0>;
 
+        #io-channel-cells = <1>;
+
         channel@0 {
             reg = <0>;
-            zephyr,gain = "ADC_GAIN_1";
-            zephyr,reference = "ADC_REF_INTERNAL";
+            zephyr,gain = "ADC_GAIN_4";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
             zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
             zephyr,resolution = <24>;
-
-            zephyr,input-positive = <16>;
-            zephyr,input-negative = <17>;
+            zephyr,current-source-pin = [03 00];
+            zephyr,input-positive = <2>;
+            zephyr,input-negative = <3>;
         };
     };
 };

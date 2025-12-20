@@ -1,52 +1,63 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(ad7124_app, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(rtd_dev, LOG_LEVEL_INF);
 
+#define R_REF               5110.0f      /* Reference Resistance */
+#define RTD_TC              3850.0f    /* Temperature Coefficient */
+#define RTD_R0              1000.0f      /* Nominal Resistance at 0°C */
+
+#define RTD_NODE DT_ALIAS(rtd_test)
+
+static const struct adc_dt_spec rtd_channel = ADC_DT_SPEC_GET(RTD_NODE);
 
 int main(void)
 {
-    const struct device *adc = DEVICE_DT_GET(DT_ALIAS(ad7124_test));
-    if (!device_is_ready(adc)) {
-        LOG_ERR("ADC device not found or not ready");
-        return 0;
-    }
+    int err;
+    int32_t buf;
 
-    LOG_INF("ADC device is ready");
-
-    struct adc_channel_cfg chnnel_0_cfg = ADC_CHANNEL_CFG_DT(DT_CHILD(DT_ALIAS(ad7124_test), channel_0));
-    if (adc_channel_setup(adc, &chnnel_0_cfg) != 0) {
-        LOG_ERR("Failed to configure ADC channel 0");
-        return 0;
-    }
-
-    int32_t sample_buffer[1];
-    
     struct adc_sequence sequence = {
-        .channels = BIT(0),
-        .buffer = sample_buffer,
-        .buffer_size = sizeof(sample_buffer),
-        .resolution = 24,
+        .buffer = &buf,
+        .buffer_size = sizeof(buf),
     };
 
-    LOG_INF("Starting AD7124 reading loop...");
+    err = adc_is_ready_dt(&rtd_channel);
+    if (err < 0) {
+        LOG_ERR("ADC device not ready (%d)", err);
+        return -1;
+    }
+
+    /* Setup Channel 0 (RTD) */
+    err = adc_channel_setup_dt(&rtd_channel);
+    if (err < 0) {
+        LOG_ERR("RTD Channel Setup failed (%d)", err);
+        return -1;
+    }
+
+    LOG_INF("Starting RTD Measurement...");
 
     while (1) {
-        int ret = adc_read(adc, &sequence);
-        if (ret == 0) {
-            int32_t raw_code = sample_buffer[0];
-            
-            double temp_c = ((double)(raw_code - 0x800000) / 13584.0) - 272.5;
-
-            printf("Raw: 0x%06X | Temp: %.2f C\n", raw_code, temp_c);
-            
+        adc_sequence_init_dt(&rtd_channel, &sequence);
+        err = adc_read(rtd_channel.dev, &sequence);
+        if (err < 0) {
+            LOG_ERR("ADC read failed (%d)", err);
         } else {
-            LOG_ERR("ADC read failed: %d", ret);
+            int32_t raw_value = buf;
+            int32_t max_count = (1 << (rtd_channel.resolution - 1)) - 1; 
+            float gain = 4.0f; 
+
+            float r_rtd = (((float)raw_value - (float)max_count) * R_REF) / (gain * (float)max_count);
+            float temp_c = (r_rtd - RTD_R0) / (RTD_TC / RTD_R0);
+
+            LOG_INF("Raw: %d | Res: %.2f Ohms | Temp: %.3f C", raw_value, (double)r_rtd, (double)temp_c);
         }
 
-        k_sleep(K_MSEC(2000));
+        printk("------------------------------------------------------------------------------------\n");
+        k_sleep(K_MSEC(1000));
     }
+
     return 0;
 }
