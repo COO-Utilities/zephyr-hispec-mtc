@@ -107,7 +107,7 @@ int heater_manager_set_power(const char *heater_id, float power_percent)
 
     /* TODO: Set hardware output based on power_percent */
     /* For now, just log */
-    LOG_DBG("Heater %s power set to %.1f%%", heater_id, power_percent);
+    LOG_DBG("Heater %s power set to %.1f%%", heater_id, (double)power_percent);
 
     k_mutex_unlock(&heater_mutex);
     return 0;
@@ -139,7 +139,7 @@ int heater_manager_distribute_power(const char *heater_ids[], int num_heaters_to
     /* Clamp total power */
     if (total_power_watts > total_max_power) {
         LOG_WRN("Requested power %.1fW exceeds max %.1fW, clamping",
-                total_power_watts, total_max_power);
+                (double)total_power_watts, (double)total_max_power);
         total_power_watts = total_max_power;
     }
     if (total_power_watts < 0.0f) {

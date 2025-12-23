@@ -24,7 +24,8 @@ LOG_MODULE_REGISTER(adc_temp_sensor, LOG_LEVEL_INF);
 /* SPI spec from DT (8-bit, MSB, MODE3, driver-managed CS) */
 static const struct spi_dt_spec bus =
     SPI_DT_SPEC_GET(AD7124_NODE,
-                    SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPOL | SPI_MODE_CPHA, 0);
+                    SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPOL | SPI_MODE_CPHA,
+                    0);
 
 /* AD7124 register addresses */
 #define REG_COMMS        0x00
@@ -286,7 +287,7 @@ int adc_temp_sensor_read(const char *sensor_id, float *temp_kelvin)
     *temp_kelvin = celsius_to_kelvin(temp_c);
 
     LOG_INF("Sensor %s: Raw=0x%06x => %.2f C (%.2f K)",
-            sensor_id, (unsigned)raw, temp_c, *temp_kelvin);
+            sensor_id, (unsigned)raw, (double)temp_c, (double)*temp_kelvin);
 
     return 0;
 }
