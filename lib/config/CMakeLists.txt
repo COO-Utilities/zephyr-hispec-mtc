@@ -1,2 +1,3 @@
 zephyr_library()
-zephyr_library_sources(config.c)
+zephyr_include_directories_ifdef(CONFIG_COO_CONFIG_LIB .)
+zephyr_library_sources_ifdef(CONFIG_COO_CONFIG_LIB config.c)

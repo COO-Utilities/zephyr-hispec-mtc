@@ -6,6 +6,8 @@
 #include "heater_manager.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/regulator.h>
+#include <math.h>
 #include <string.h>
 
 LOG_MODULE_REGISTER(heater_manager, LOG_LEVEL_INF);
@@ -17,8 +19,11 @@ static struct {
     char id[MAX_ID_LENGTH];
     float power_percent;
     float max_power_watts;
+    float resistance_ohms;
     heater_status_t status;
     bool enabled;
+    heater_type_t type;
+    const struct device *regulator_dev;
 } heater_state[MAX_MANAGED_HEATERS];
 
 static int num_heaters = 0;
@@ -48,9 +53,32 @@ int heater_manager_init(const thermal_config_t *config)
         strncpy(heater_state[i].id, config->heaters[i].id, MAX_ID_LENGTH - 1);
         heater_state[i].power_percent = 0.0f;
         heater_state[i].max_power_watts = config->heaters[i].max_power_w;
+        heater_state[i].resistance_ohms = config->heaters[i].resistance_ohms;
+        heater_state[i].type = config->heaters[i].type;
         heater_state[i].enabled = config->heaters[i].enabled;
         heater_state[i].status = config->heaters[i].enabled ?
                                   HEATER_STATUS_OK : HEATER_STATUS_DISABLED;
+
+        /* Initialize regulator if applicable */
+        if (heater_state[i].type == HEATER_TYPE_HIGH_POWER) {
+             /* 
+              * For now, map any high power heater to the test alias.
+              * In a real multi-regulator setup, we would need a mapping in config 
+              * or device tree properties.
+              */
+             heater_state[i].regulator_dev = DEVICE_DT_GET(DT_ALIAS(high_current_heater_test));
+             
+             if (!device_is_ready(heater_state[i].regulator_dev)) {
+                 LOG_ERR("Regulator device not ready for heater %s", heater_state[i].id);
+                 heater_state[i].status = HEATER_STATUS_ERROR;
+             } else {
+                 LOG_INF("Bound heater %s to regulator", heater_state[i].id);
+                 /* Ensure output is disabled initially */
+                 regulator_disable(heater_state[i].regulator_dev);
+             }
+        } else {
+            heater_state[i].regulator_dev = NULL;
+        }
     }
 
     /* TODO: Initialize heater hardware drivers */
@@ -105,7 +133,49 @@ int heater_manager_set_power(const char *heater_id, float power_percent)
     /* Update power level */
     heater_state[idx].power_percent = power_percent;
 
-    /* TODO: Set hardware output based on power_percent */
+    if (heater_state[idx].type == HEATER_TYPE_HIGH_POWER && heater_state[idx].regulator_dev != NULL) {
+        
+        if (heater_state[idx].status == HEATER_STATUS_ERROR) {
+            k_mutex_unlock(&heater_mutex);
+            return -4;
+        }
+
+        /* Calculate target power in Watts */
+        float target_power = (power_percent / 100.0f) * heater_state[idx].max_power_watts;
+        
+        /* Calculate target voltage: V = sqrt(P * R) */
+        /* Convert to microvolts for regulator API */
+        float resistance = heater_state[idx].resistance_ohms;
+        if (resistance <= 0.001f) {
+             /* Avoid division by zero/invalid resistance */
+             resistance = 1.0f; 
+        }
+        
+        float target_voltage = sqrtf(target_power * resistance);
+        int32_t target_uv = (int32_t)(target_voltage * 1000000.0f);
+
+        LOG_DBG("Heater %s: %.1f%% -> %.2fW -> %.3fV (%d uV)", heater_id, power_percent, target_power, target_voltage, target_uv);
+
+        if (target_uv > 0) {
+            int ret = regulator_set_voltage(heater_state[idx].regulator_dev, target_uv, target_uv);
+            if (ret < 0) {
+                LOG_ERR("Failed to set voltage for heater %s: %d", heater_id, ret);
+                /* Don't return error yet, try to enable/disable */
+            }
+            
+            ret = regulator_enable(heater_state[idx].regulator_dev);
+             if (ret < 0) {
+                LOG_ERR("Failed to enable regulator for heater %s: %d", heater_id, ret);
+            }
+        } else {
+             int ret = regulator_disable(heater_state[idx].regulator_dev);
+             if (ret < 0) {
+                LOG_ERR("Failed to disable regulator for heater %s: %d", heater_id, ret);
+            }
+        }
+    }
+
+    /* TODO: Set hardware output based on power_percent (PWM for low power) */
     /* For now, just log */
     LOG_DBG("Heater %s power set to %.1f%%", heater_id, power_percent);
 

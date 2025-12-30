@@ -37,11 +37,12 @@ thermal_config_t* config_load_defaults(void)
     default_config.sensors[0].extrapolate_method = EXTRAP_NONE;
     default_config.sensors[0].enabled = true;
 
-    /* Heater 1: Low power */
+    /* Heater 1: High power */
     strncpy(default_config.heaters[0].id, "heater-1", MAX_ID_LENGTH - 1);
-    default_config.heaters[0].type = HEATER_TYPE_LOW_POWER;
+    default_config.heaters[0].type = HEATER_TYPE_HIGH_POWER;
     strncpy(default_config.heaters[0].location, "inlet", MAX_LOCATION_LENGTH - 1);
     default_config.heaters[0].max_power_w = 50.0f;
+    default_config.heaters[0].resistance_ohms = 30.0f;
     default_config.heaters[0].enabled = true;
 
     /* Heater 2: Low power */
@@ -49,6 +50,7 @@ thermal_config_t* config_load_defaults(void)
     default_config.heaters[1].type = HEATER_TYPE_LOW_POWER;
     strncpy(default_config.heaters[1].location, "outlet", MAX_LOCATION_LENGTH - 1);
     default_config.heaters[1].max_power_w = 50.0f;
+    default_config.heaters[1].resistance_ohms = 10.0f;
     default_config.heaters[1].enabled = true;
 
     /* Control Loop 1 */

@@ -105,6 +105,7 @@ typedef struct {
     heater_type_t type;
     char location[MAX_LOCATION_LENGTH];
     float max_power_w;
+    float resistance_ohms;
     bool enabled;
 } heater_config_t;
 

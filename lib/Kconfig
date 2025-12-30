@@ -1,5 +1,9 @@
-menu "Custom libraries"
+menu "COO Custom libraries"
 
 rsource "coo_commons/Kconfig"
+rsource "config/Kconfig"
+rsource "heaters/Kconfig"
+rsource "sensors/Kconfig"
+rsource "control/Kconfig"
 
 endmenu
