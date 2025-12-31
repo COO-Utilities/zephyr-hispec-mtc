@@ -1,5 +1,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/device.h>
 
 #include <config.h>
 #include <heater_manager.h>
@@ -22,6 +23,7 @@ int main(void) {
     config->heaters[0].type = HEATER_TYPE_HIGH_POWER;
     config->heaters[0].max_power_w = 20.0f;     // 20W max
     config->heaters[0].resistance_ohms = 5.0f;  // 5 Ohms
+    config->heaters[0].regulator_dev = DEVICE_DT_GET(DT_ALIAS(high_current_heater_test));
     config->heaters[0].enabled = true;
 
     /* Initialize heater manager */

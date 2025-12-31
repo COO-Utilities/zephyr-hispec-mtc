@@ -106,6 +106,7 @@ typedef struct {
     char location[MAX_LOCATION_LENGTH];
     float max_power_w;
     float resistance_ohms;
+    const struct device *regulator_dev;
     bool enabled;
 } heater_config_t;
 

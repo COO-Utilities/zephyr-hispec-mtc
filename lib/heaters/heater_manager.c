@@ -61,14 +61,15 @@ int heater_manager_init(const thermal_config_t *config)
 
         /* Initialize regulator if applicable */
         if (heater_state[i].type == HEATER_TYPE_HIGH_POWER) {
-             /* 
-              * For now, map any high power heater to the test alias.
-              * In a real multi-regulator setup, we would need a mapping in config 
-              * or device tree properties.
+             /*
+              * Using regulator device provided in configuration.
               */
-             heater_state[i].regulator_dev = DEVICE_DT_GET(DT_ALIAS(high_current_heater_test));
+             heater_state[i].regulator_dev = config->heaters[i].regulator_dev;
              
-             if (!device_is_ready(heater_state[i].regulator_dev)) {
+             if (!heater_state[i].regulator_dev) {
+                 LOG_ERR("Regulator device not provided for heater %s", heater_state[i].id);
+                 heater_state[i].status = HEATER_STATUS_ERROR;
+             } else if (!device_is_ready(heater_state[i].regulator_dev)) {
                  LOG_ERR("Regulator device not ready for heater %s", heater_state[i].id);
                  heater_state[i].status = HEATER_STATUS_ERROR;
              } else {
