@@ -82,15 +82,13 @@ int heater_manager_init(const thermal_config_t *config)
         }
     }
 
-    /* TODO: Initialize heater hardware drivers */
-    /* Start with:
-     * 1. TPS55287Q1 I2C driver for high-power heaters
-     * 2. Low-power heater driver
-     * 3. Setting initial output to 0%
-     */
+    /* Ensure all heaters are starting in a safe off state */
+    for (int i = 0; i < num_heaters; i++) {
+        heater_manager_set_power(heater_state[i].id, 0.0f);
+    }
 
-    LOG_INF("Heater manager initialized with %d heaters (hardware drivers not yet implemented)",
-            num_heaters);
+    LOG_INF("Heater manager initialized with %d heaters", num_heaters);
+    
     return 0;
 }
 
