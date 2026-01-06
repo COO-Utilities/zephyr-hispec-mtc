@@ -1,6 +1,5 @@
 /*
  * Devicetree overlay for NUCLEO-H563ZI:
- * - AD7124 ADC on SPI1
  * - TPS55287Q1 Regulator on I2C1
  */
 

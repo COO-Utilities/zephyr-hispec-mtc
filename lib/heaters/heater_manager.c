@@ -24,6 +24,7 @@ static struct {
     bool enabled;
     heater_type_t type;
     const struct device *regulator_dev;
+    bool regulator_active;
 } heater_state[MAX_MANAGED_HEATERS];
 
 static int num_heaters = 0;
@@ -58,6 +59,7 @@ int heater_manager_init(const thermal_config_t *config)
         heater_state[i].enabled = config->heaters[i].enabled;
         heater_state[i].status = config->heaters[i].enabled ?
                                   HEATER_STATUS_OK : HEATER_STATUS_DISABLED;
+        heater_state[i].regulator_active = false;
 
         /* Initialize regulator if applicable */
         if (heater_state[i].type == HEATER_TYPE_HIGH_POWER) {
@@ -75,7 +77,10 @@ int heater_manager_init(const thermal_config_t *config)
              } else {
                  LOG_INF("Bound heater %s to regulator", heater_state[i].id);
                  /* Ensure output is disabled initially */
-                 regulator_disable(heater_state[i].regulator_dev);
+                 if (heater_state[i].regulator_active) {
+                     regulator_disable(heater_state[i].regulator_dev);
+                     heater_state[i].regulator_active = false;
+                 }
              }
         } else {
             heater_state[i].regulator_dev = NULL;
@@ -162,21 +167,30 @@ int heater_manager_set_power(const char *heater_id, float power_percent)
                 /* Don't return error yet, try to enable/disable */
             }
             
-            ret = regulator_enable(heater_state[idx].regulator_dev);
-             if (ret < 0) {
-                LOG_ERR("Failed to enable regulator for heater %s: %d", heater_id, ret);
+            if (!heater_state[idx].regulator_active) {
+                ret = regulator_enable(heater_state[idx].regulator_dev);
+                if (ret < 0) {
+                    LOG_ERR("Failed to enable regulator for heater %s: %d", heater_id, ret);
+                } else {
+                    heater_state[idx].regulator_active = true;
+                }
             }
         } else {
-             int ret = regulator_disable(heater_state[idx].regulator_dev);
-             if (ret < 0) {
-                LOG_ERR("Failed to disable regulator for heater %s: %d", heater_id, ret);
-            }
+            LOG_INF("Test: heater disable");
+             if (heater_state[idx].regulator_active) {
+                int ret = regulator_disable(heater_state[idx].regulator_dev);
+                if (ret < 0) {
+                    LOG_ERR("Failed to disable regulator for heater %s: %d", heater_id, ret);
+                } else {
+                    heater_state[idx].regulator_active = false;
+                }
+             }
         }
     }
 
     /* TODO: Set hardware output based on power_percent (PWM for low power) */
     /* For now, just log */
-    LOG_DBG("Heater %s power set to %.1f%%", heater_id, power_percent);
+    LOG_DBG("Heater %s power set to %.1f%%", heater_id, (double)power_percent);
 
     k_mutex_unlock(&heater_mutex);
     return 0;
@@ -208,7 +222,7 @@ int heater_manager_distribute_power(const char *heater_ids[], int num_heaters_to
     /* Clamp total power */
     if (total_power_watts > total_max_power) {
         LOG_WRN("Requested power %.1fW exceeds max %.1fW, clamping",
-                total_power_watts, total_max_power);
+                (double)total_power_watts, (double)total_max_power);
         total_power_watts = total_max_power;
     }
     if (total_power_watts < 0.0f) {

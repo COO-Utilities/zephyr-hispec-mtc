@@ -76,6 +76,7 @@ static int tps55287q1_adc_to_voltage(const struct tps55287q1_config *cfg, uint16
 
 /* --- regulator API callbacks --- */
 static int regulator_tps55287q1_enable(const struct device *dev) {
+	LOG_DBG("TEST: Enabling regulator %s", dev->name);
     int ret;
 
     ret = tps55287q1_update_bits(dev, TPS55287Q1_REG_MODE, TPS55287Q1_MODE_OE, TPS55287Q1_MODE_OE);
@@ -288,6 +289,13 @@ static int tps55287q1_init(const struct device *dev) {
 		LOG_ERR("%s: Failed to configure VOUT_FS register: %d", dev->name, ret);
 		return ret;
 	}
+
+    /* Disable regulator by default */
+    ret = tps55287q1_update_bits(dev, TPS55287Q1_REG_MODE, TPS55287Q1_MODE_OE, 0);
+    if (ret < 0) {
+        LOG_ERR("%s: Failed to disable regulator: %d", dev->name, ret);
+        return ret;
+    }
 
 	ret = regulator_common_init(dev, false);
 	if (ret < 0) {

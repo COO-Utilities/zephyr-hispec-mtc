@@ -41,7 +41,7 @@ thermal_config_t* config_load_defaults(void)
     strncpy(default_config.heaters[0].id, "heater-1", MAX_ID_LENGTH - 1);
     default_config.heaters[0].type = HEATER_TYPE_HIGH_POWER;
     strncpy(default_config.heaters[0].location, "inlet", MAX_LOCATION_LENGTH - 1);
-    default_config.heaters[0].max_power_w = 50.0f;
+    default_config.heaters[0].max_power_w = 40.0f;
     default_config.heaters[0].resistance_ohms = 30.0f;
     default_config.heaters[0].enabled = true;
 
