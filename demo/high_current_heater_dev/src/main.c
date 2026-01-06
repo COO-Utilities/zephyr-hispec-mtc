@@ -1,6 +1,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/device.h>
+#include <math.h>
 
 #include <config.h>
 #include <heater_manager.h>
@@ -35,32 +36,28 @@ int main(void) {
 
     LOG_INF("Heater manager initialized. Starting power cycle loop...");
 
-    float set_power_percent = 0.0f;
-    heater_manager_set_power("high-power-1", set_power_percent);
-    // heater_manager_emergency_stop();
+    LOG_INF("Starting power ramp test: 0% to 35% with 1% increments");
 
-    float power_percent = 0.0f;
-    heater_manager_get_power("high-power-1", &power_percent);
-    LOG_INF("Heater power: %.1lf%%", power_percent);
-    
-
-    /* Test loop: Cycle through power levels */
-    // while (1) {
-    //     /* 0% Power */
-    //     heater_manager_set_power("high-power-1", 0.0f);
-    //     k_sleep(K_SECONDS(5));
-
-    //     /* 10% Power */
-    //     heater_manager_set_power("high-power-1", 10.0f);
-    //     k_sleep(K_SECONDS(5));
-
-    //     /* 50% Power */
-    //     heater_manager_set_power("high-power-1", 50.0f);
-    //     k_sleep(K_SECONDS(5));
+    for (int i = 0; i <= 35; i++) {
+        float p = (float)i;
+        heater_manager_set_power("high-power-1", p);
         
-    //     /* 100% Power */
-    //     heater_manager_set_power("high-power-1", 100.0f);
-    //     k_sleep(K_SECONDS(5));
-    // }
+        float current_p = 0.0f;
+        heater_manager_get_power("high-power-1", &current_p);
+        
+        float expected_v = sqrtf(30.0f * 40.0f * p / 100.0f);
+        LOG_INF("Set Power[%%]: %.1f%%, Readback[%%]: %.1f%%, Expected Voltage: %.3fV", 
+                (double)p, (double)current_p, (double)expected_v);
+        
+        k_sleep(K_MSEC(6000));
+    }
+
+    heater_manager_set_power("high-power-1", 0.0f);
+
+    while (1) {
+        k_sleep(K_FOREVER);
+        // Keep the main thread alive or loop indefinitely if needed
+        // For this test, we just stop after the ramp.
+    }
     return 0;
 }
