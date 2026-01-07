@@ -176,7 +176,6 @@ int heater_manager_set_power(const char *heater_id, float power_percent)
                 }
             }
         } else {
-            LOG_INF("Test: heater disable");
              if (heater_state[idx].regulator_active) {
                 int ret = regulator_disable(heater_state[idx].regulator_dev);
                 if (ret < 0) {

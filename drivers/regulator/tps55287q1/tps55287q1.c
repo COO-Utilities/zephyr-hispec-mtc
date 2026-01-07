@@ -76,7 +76,6 @@ static int tps55287q1_adc_to_voltage(const struct tps55287q1_config *cfg, uint16
 
 /* --- regulator API callbacks --- */
 static int regulator_tps55287q1_enable(const struct device *dev) {
-	LOG_DBG("TEST: Enabling regulator %s", dev->name);
     int ret;
 
     ret = tps55287q1_update_bits(dev, TPS55287Q1_REG_MODE, TPS55287Q1_MODE_OE, TPS55287Q1_MODE_OE);
