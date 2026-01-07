@@ -5,6 +5,7 @@
 
 #include <config.h>
 #include <sensor_manager.h>
+#include <heater_manager.h>
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
@@ -16,6 +17,7 @@ static const struct adc_dt_spec sensor_1_adc_spec = ADC_DT_SPEC_GET(DT_ALIAS(sen
 int main(void)
 {
     LOG_INF("Sensor Dev Demo Starting");
+    int ret;
 
     /* Load configuration */
     thermal_config_t *config = config_load_defaults();
@@ -23,6 +25,21 @@ int main(void)
         LOG_ERR("Failed to load configuration");
         return -1;
     }
+
+    strncpy(config->heaters[0].id, "high-power-1", MAX_ID_LENGTH - 1);
+    config->heaters[0].type = HEATER_TYPE_HIGH_POWER;
+    config->heaters[0].max_power_w = 40.0f;     // 40W max
+    config->heaters[0].resistance_ohms = 30.0f;  // 30 Ohms
+    config->heaters[0].regulator_dev = DEVICE_DT_GET(DT_ALIAS(high_current_heater_test));
+    config->heaters[0].enabled = true;
+
+    ret = heater_manager_init(config);
+    if (ret < 0) {
+        LOG_ERR("Failed to initialize heater manager: %d", ret);
+        return -1;
+    }
+
+    heater_manager_set_power("high-power-1", 0.0f);
 
     /* Assign hardware drivers to config */
 #if DT_NODE_HAS_STATUS(DT_ALIAS(sensor_test), okay)
@@ -33,13 +50,17 @@ int main(void)
 #endif
 
     /* Initialize Sensor Manager */
-    int ret = sensor_manager_init(config);
+    ret = sensor_manager_init(config);
     if (ret != 0) {
         LOG_ERR("Sensor manager init failed: %d", ret);
         return -1;
     }
 
     /* Main loop */
+    /* Main loop */
+    float current_power = 0.0f;
+    int ticks = 0;
+    
     while (1) {
         /* Read sensors */
         ret = sensor_manager_read_all();
@@ -58,7 +79,20 @@ int main(void)
             }
         }
 
-        k_msleep(10000);
+        /* Update heater power every 20 seconds */
+        if (ticks % 20 == 0) {
+             if (current_power < 10.0f) {
+                 current_power += 0.1f;
+                 if (current_power > 10.0f) {
+                     current_power = 10.0f;
+                 }
+                 heater_manager_set_power("high-power-1", current_power);
+                 LOG_INF("Setting heater power to %.1f%%", (double)current_power);
+             }
+        }
+
+        ticks++;
+        k_msleep(1000);
     }
     return 0;
 }
