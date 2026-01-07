@@ -1,0 +1,61 @@
+/*
+ * Devicetree overlay for NUCLEO-H563ZI:
+ * - AD7124 ADC on SPI1
+ */
+
+/ {
+    aliases {
+        sensor-test = &sensor_test_node;
+        high-current-heater-test = &tps55287q1;
+    };
+
+    sensor_test_node: zephyr,user {
+        io-channels = <&ad7124_dev 0>;
+    };
+};
+
+&i2c1 {
+    status = "okay";
+
+    tps55287q1: tps55287q1@74 {
+        compatible = "ti,tps55287q1";
+        reg = <0x74>;
+        status = "okay";
+
+        intfb = <3>;
+        force-discharge;
+        r-sense-uohm = <20000>;
+        
+        /* Regulator common properties */
+		regulator-name = "TPS55287Q1";
+        regulator-active-discharge = <0>;
+    };
+};
+
+&spi1 {
+    status = "okay";
+
+    ad7124_dev: ad7124@0 {
+        compatible = "adi,ad7124-adc";
+        status = "okay";
+        reg = <0>;
+        spi-max-frequency = <1000000>;
+        active-device = <1>;
+
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        #io-channel-cells = <1>;
+
+        channel@0 {
+            reg = <0>;
+            zephyr,gain = "ADC_GAIN_4";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,current-source-pin = [ 03 00 ];
+            zephyr,input-positive = <2>;
+            zephyr,input-negative = <3>;
+        };
+    };
+};

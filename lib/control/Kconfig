@@ -1,0 +1,6 @@
+config COO_CONTROL_LIB
+    bool "COO Control Library"
+    default y
+    depends on COO_CONFIG_LIB
+    help
+      Enable the COO Thermal Controller Control Loop library.
