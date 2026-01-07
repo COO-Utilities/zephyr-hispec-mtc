@@ -32,9 +32,14 @@ thermal_config_t* config_load_defaults(void)
     strncpy(default_config.sensors[0].location, "test", MAX_LOCATION_LENGTH - 1);
     default_config.sensors[0].default_value = 1000.0f;
     default_config.sensors[0].temperature_at_default = 273.15f;
-    default_config.sensors[0].temperature_coefficient = 0.00385f;
+    default_config.sensors[0].temperature_coefficient = 3850.0f;
+    default_config.sensors[0].reference_resistance = 5110.0f;
+    default_config.sensors[0].nominal_resistance = 1000.0f;
+    default_config.sensors[0].adc_gain = 4;
+    default_config.sensors[0].adc_resolution = 24;
     strncpy(default_config.sensors[0].calibration_file, "null", MAX_PATH_LENGTH - 1);
     default_config.sensors[0].extrapolate_method = EXTRAP_NONE;
+    default_config.sensors[0].driver_data = NULL;
     default_config.sensors[0].enabled = true;
 
     /* Heater 1: High power */

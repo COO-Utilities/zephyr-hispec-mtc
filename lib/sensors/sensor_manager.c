@@ -4,9 +4,9 @@
  */
 
 #include "sensor_manager.h"
-#include "adc_temp_sensor.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/adc.h>
 #include <string.h>
 
 LOG_MODULE_REGISTER(sensor_manager, LOG_LEVEL_INF);
@@ -47,14 +47,22 @@ int sensor_manager_init(const thermal_config_t *config)
     for (int i = 0; i < num_sensors; i++) {
         strncpy(sensor_cache[i].id, config->sensors[i].id, MAX_ID_LENGTH - 1);
         sensor_cache[i].valid = false;
-    }
+        
+        /* Check if ADC device is ready if configured */
+        /* Check if ADC device is ready if configured */
+        const struct adc_dt_spec *adc = (const struct adc_dt_spec *)config->sensors[i].driver_data;
+        if (adc != NULL) {
+            if (!adc_is_ready_dt(adc)) {
+                LOG_ERR("ADC device not ready for sensor %s", config->sensors[i].id);
+                return -3;
+            }
 
-    /* Initialize hardware drivers */
-    /* For now, we only have ADC temp sensor */
-    int ret = adc_temp_sensor_init(config);
-    if (ret != 0) {
-        LOG_ERR("ADC temp sensor init failed: %d", ret);
-        return ret;
+            int ret = adc_channel_setup_dt(adc);
+            if (ret != 0) {
+                LOG_ERR("Failed to setup ADC channel for sensor %s: %d", config->sensors[i].id, ret);
+                return -4;
+            }
+        }
     }
 
     LOG_INF("Sensor manager initialized with %d sensors", num_sensors);
@@ -74,10 +82,60 @@ int sensor_manager_read_all(void)
 
         const char *sensor_id = config_ptr->sensors[i].id;
         float temp_k = 0.0f;
+        int ret = -1;
 
-        /* Read from appropriate driver based on sensor type */
-        /* For now, all sensors use ADC temp sensor */
-        int ret = adc_temp_sensor_read(sensor_id, &temp_k);
+        const struct adc_dt_spec *adc = (const struct adc_dt_spec *)config_ptr->sensors[i].driver_data;
+
+        /* Read from ADC if configured */
+        if (adc != NULL) {
+            int32_t buf;
+            struct adc_sequence sequence = {
+                .buffer = &buf,
+                .buffer_size = sizeof(buf),
+            };
+
+            adc_sequence_init_dt(adc, &sequence);
+
+            ret = adc_read_dt(adc, &sequence);
+            if (ret == 0) {
+                if (config_ptr->sensors[i].type == SENSOR_TYPE_INTERNAL_TEMP) {
+                        /* 
+                        * Convert raw ADC code to temperature.
+                        * AD7124 Internal Temp Sensor formula:
+                        * Temp(C) = ((Code - 0x800000) / 13584) - 272.5
+                        * Code is 24-bit unipolar (0 to 2^24-1) effectively in bipolar mode context from previous driver
+                        * but Zephyr AD7124 likely returns 32-bit signed or unsigned.
+                        * Let's assume the raw value is what we expect. 
+                        * NOTE: If using differential mode, Zephyr might return signed value centered at 0?
+                        * But overlay says bipolar?
+                        * Let's stick to the formula from the manual driver which expected 0x800000 offset for 0V?
+                        * Actually, let's treat 'buf' as the raw code.
+                        */
+                        
+                        /* 
+                        * Note: The previous manual driver was bit-banging and knew exactly what it got.
+                        * The Zephyr AD7124 driver might do some processing. 
+                        * For now, applying the same formula.
+                        */
+                    float temp_c = ((float)((uint32_t)buf & 0xFFFFFF) - 8388608.0f) / 13584.0f - 272.5f;
+                    temp_k = temp_c + 273.15f;
+                } else if (config_ptr->sensors[i].type == SENSOR_TYPE_P_RTD) {
+                    float rtd_tc = config_ptr->sensors[i].temperature_coefficient;
+                    float r_ref = config_ptr->sensors[i].reference_resistance;
+                    float r_nom = config_ptr->sensors[i].nominal_resistance;
+                    float gain = (float)config_ptr->sensors[i].adc_gain;
+                    LOG_DBG("Sensor %s: rtd_tc = %f, r_ref = %f, r_nom = %f, gain = %f", config_ptr->sensors[i].id, rtd_tc, r_ref, r_nom, gain);
+                    
+                    int32_t max_count = (1 << (config_ptr->sensors[i].adc_resolution - 1)) - 1;
+
+                    float r_rtd = (((float)(uint32_t)buf - (float)max_count) * r_ref) / (gain * (float)max_count);
+                    float temp_c = (r_rtd - r_nom) / (rtd_tc / r_nom);
+                    temp_k = temp_c + 273.15f;
+                    LOG_DBG("Raw: %d | Res: %.2f Ohms | Temp: %.3f C", buf, (double)r_rtd, (double)temp_c);
+
+                }
+            }
+        }
 
         if (ret == 0) {
             sensor_cache[i].reading.temperature_kelvin = temp_k;

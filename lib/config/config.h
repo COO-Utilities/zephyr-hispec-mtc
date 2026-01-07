@@ -53,6 +53,7 @@ typedef enum {
  * Sensor types
  */
 typedef enum {
+    SENSOR_TYPE_INTERNAL_TEMP, // AD7124 internal temperature sensor
     SENSOR_TYPE_P_RTD       // Penguin RTD sensors
 } sensor_type_t;
 
@@ -92,8 +93,13 @@ typedef struct {
     float default_value;              // Resistance (RTD) or Voltage (diode/TC)
     float temperature_at_default;     // Temperature in Kelvin
     float temperature_coefficient;    // dR/dT or dV/dT
+    float reference_resistance;
+    float nominal_resistance;
+    int adc_gain;
+    int adc_resolution;
     char calibration_file[MAX_PATH_LENGTH];
     extrap_method_t extrapolate_method;
+    const void *driver_data;
     bool enabled;
 } sensor_config_t;
 
