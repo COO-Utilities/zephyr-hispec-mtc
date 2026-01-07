@@ -1,0 +1,6 @@
+config COO_SENSORS_LIB
+    bool "COO Sensors Library"
+    default y
+    depends on COO_CONFIG_LIB
+    help
+      Enable the COO Thermal Controller Sensor Manager library.
