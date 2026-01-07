@@ -1,0 +1,5 @@
+config COO_CONFIG_LIB
+    bool "COO Config Library"
+    default y
+    help
+      Enable the COO Thermal Controller Configuration library.

@@ -1,2 +1,3 @@
 zephyr_library()
-zephyr_library_sources(heater_manager.c)
+zephyr_include_directories_ifdef(CONFIG_COO_HEATERS_LIB .)
+zephyr_library_sources_ifdef(CONFIG_COO_HEATERS_LIB heater_manager.c)

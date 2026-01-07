@@ -6,6 +6,8 @@
 #include "heater_manager.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/regulator.h>
+#include <math.h>
 #include <string.h>
 
 LOG_MODULE_REGISTER(heater_manager, LOG_LEVEL_INF);
@@ -17,8 +19,12 @@ static struct {
     char id[MAX_ID_LENGTH];
     float power_percent;
     float max_power_watts;
+    float resistance_ohms;
     heater_status_t status;
     bool enabled;
+    heater_type_t type;
+    const struct device *regulator_dev;
+    bool regulator_active;
 } heater_state[MAX_MANAGED_HEATERS];
 
 static int num_heaters = 0;
@@ -48,20 +54,46 @@ int heater_manager_init(const thermal_config_t *config)
         strncpy(heater_state[i].id, config->heaters[i].id, MAX_ID_LENGTH - 1);
         heater_state[i].power_percent = 0.0f;
         heater_state[i].max_power_watts = config->heaters[i].max_power_w;
+        heater_state[i].resistance_ohms = config->heaters[i].resistance_ohms;
+        heater_state[i].type = config->heaters[i].type;
         heater_state[i].enabled = config->heaters[i].enabled;
         heater_state[i].status = config->heaters[i].enabled ?
                                   HEATER_STATUS_OK : HEATER_STATUS_DISABLED;
+        heater_state[i].regulator_active = false;
+
+        /* Initialize regulator if applicable */
+        if (heater_state[i].type == HEATER_TYPE_HIGH_POWER) {
+             /*
+              * Using regulator device provided in configuration.
+              */
+             heater_state[i].regulator_dev = config->heaters[i].regulator_dev;
+             
+             if (!heater_state[i].regulator_dev) {
+                 LOG_ERR("Regulator device not provided for heater %s", heater_state[i].id);
+                 heater_state[i].status = HEATER_STATUS_ERROR;
+             } else if (!device_is_ready(heater_state[i].regulator_dev)) {
+                 LOG_ERR("Regulator device not ready for heater %s", heater_state[i].id);
+                 heater_state[i].status = HEATER_STATUS_ERROR;
+             } else {
+                 LOG_INF("Bound heater %s to regulator", heater_state[i].id);
+                 /* Ensure output is disabled initially */
+                 if (heater_state[i].regulator_active) {
+                     regulator_disable(heater_state[i].regulator_dev);
+                     heater_state[i].regulator_active = false;
+                 }
+             }
+        } else {
+            heater_state[i].regulator_dev = NULL;
+        }
     }
 
-    /* TODO: Initialize heater hardware drivers */
-    /* Start with:
-     * 1. TPS55287Q1 I2C driver for high-power heaters
-     * 2. Low-power heater driver
-     * 3. Setting initial output to 0%
-     */
+    /* Ensure all heaters are starting in a safe off state */
+    for (int i = 0; i < num_heaters; i++) {
+        heater_manager_set_power(heater_state[i].id, 0.0f);
+    }
 
-    LOG_INF("Heater manager initialized with %d heaters (hardware drivers not yet implemented)",
-            num_heaters);
+    LOG_INF("Heater manager initialized with %d heaters", num_heaters);
+    
     return 0;
 }
 
@@ -105,9 +137,59 @@ int heater_manager_set_power(const char *heater_id, float power_percent)
     /* Update power level */
     heater_state[idx].power_percent = power_percent;
 
-    /* TODO: Set hardware output based on power_percent */
+    if (heater_state[idx].type == HEATER_TYPE_HIGH_POWER && heater_state[idx].regulator_dev != NULL) {
+        
+        if (heater_state[idx].status == HEATER_STATUS_ERROR) {
+            k_mutex_unlock(&heater_mutex);
+            return -4;
+        }
+
+        /* Calculate target power in Watts */
+        float target_power = (power_percent / 100.0f) * heater_state[idx].max_power_watts;
+        
+        /* Calculate target voltage: V = sqrt(P * R) */
+        /* Convert to microvolts for regulator API */
+        float resistance = heater_state[idx].resistance_ohms;
+        if (resistance <= 0.001f) {
+             /* Avoid division by zero/invalid resistance */
+             resistance = 1.0f; 
+        }
+        
+        float target_voltage = sqrtf(target_power * resistance);
+        int32_t target_uv = (int32_t)(target_voltage * 1000000.0f);
+
+        LOG_DBG("Heater %s: %.1f%% -> %.2fW -> %.3fV (%d uV)", heater_id, power_percent, target_power, target_voltage, target_uv);
+
+        if (target_uv > 0) {
+            int ret = regulator_set_voltage(heater_state[idx].regulator_dev, target_uv, target_uv);
+            if (ret < 0) {
+                LOG_ERR("Failed to set voltage for heater %s: %d", heater_id, ret);
+                /* Don't return error yet, try to enable/disable */
+            }
+            
+            if (!heater_state[idx].regulator_active) {
+                ret = regulator_enable(heater_state[idx].regulator_dev);
+                if (ret < 0) {
+                    LOG_ERR("Failed to enable regulator for heater %s: %d", heater_id, ret);
+                } else {
+                    heater_state[idx].regulator_active = true;
+                }
+            }
+        } else {
+             if (heater_state[idx].regulator_active) {
+                int ret = regulator_disable(heater_state[idx].regulator_dev);
+                if (ret < 0) {
+                    LOG_ERR("Failed to disable regulator for heater %s: %d", heater_id, ret);
+                } else {
+                    heater_state[idx].regulator_active = false;
+                }
+             }
+        }
+    }
+
+    /* TODO: Set hardware output based on power_percent (PWM for low power) */
     /* For now, just log */
-    LOG_DBG("Heater %s power set to %.1f%%", heater_id, power_percent);
+    LOG_DBG("Heater %s power set to %.1f%%", heater_id, (double)power_percent);
 
     k_mutex_unlock(&heater_mutex);
     return 0;
@@ -139,7 +221,7 @@ int heater_manager_distribute_power(const char *heater_ids[], int num_heaters_to
     /* Clamp total power */
     if (total_power_watts > total_max_power) {
         LOG_WRN("Requested power %.1fW exceeds max %.1fW, clamping",
-                total_power_watts, total_max_power);
+                (double)total_power_watts, (double)total_max_power);
         total_power_watts = total_max_power;
     }
     if (total_power_watts < 0.0f) {

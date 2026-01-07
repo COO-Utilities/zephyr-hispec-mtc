@@ -1,5 +1,3 @@
 zephyr_library()
-
-zephyr_include_directories(../../include)
-
-zephyr_library_sources(control_loop.c)
+zephyr_include_directories_ifdef(CONFIG_COO_CONTROL_LIB .)
+zephyr_library_sources_ifdef(CONFIG_COO_CONTROL_LIB control_loop.c)

@@ -6,8 +6,9 @@
 #ifndef HEATER_MANAGER_H
 #define HEATER_MANAGER_H
 
-#include "../config/config.h"
 #include <stdbool.h>
+
+#include <config.h>
 
 /**
  * Heater status

@@ -289,6 +289,13 @@ static int tps55287q1_init(const struct device *dev) {
 		return ret;
 	}
 
+    /* Disable regulator by default */
+    ret = tps55287q1_update_bits(dev, TPS55287Q1_REG_MODE, TPS55287Q1_MODE_OE, 0);
+    if (ret < 0) {
+        LOG_ERR("%s: Failed to disable regulator: %d", dev->name, ret);
+        return ret;
+    }
+
 	ret = regulator_common_init(dev, false);
 	if (ret < 0) {
 		LOG_ERR("%s: Failed to initialize regulator: %d", dev->name, ret);
