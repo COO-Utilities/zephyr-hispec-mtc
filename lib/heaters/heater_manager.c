@@ -158,7 +158,7 @@ int heater_manager_set_power(const char *heater_id, float power_percent)
         float target_voltage = sqrtf(target_power * resistance);
         int32_t target_uv = (int32_t)(target_voltage * 1000000.0f);
 
-        LOG_DBG("Heater %s: %.1f%% -> %.2fW -> %.3fV (%d uV)", heater_id, power_percent, target_power, target_voltage, target_uv);
+        LOG_DBG("Heater %s: %.1f%% -> %.2fW -> %.3fV (%d uV)", heater_id, (double)power_percent, (double)target_power, (double)target_voltage, target_uv);
 
         if (target_uv > 0) {
             int ret = regulator_set_voltage(heater_state[idx].regulator_dev, target_uv, target_uv);

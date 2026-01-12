@@ -124,7 +124,7 @@ int sensor_manager_read_all(void)
                     float r_ref = config_ptr->sensors[i].reference_resistance;
                     float r_nom = config_ptr->sensors[i].nominal_resistance;
                     float gain = (float)config_ptr->sensors[i].adc_gain;
-                    LOG_DBG("Sensor %s: rtd_tc = %f, r_ref = %f, r_nom = %f, gain = %f", config_ptr->sensors[i].id, rtd_tc, r_ref, r_nom, gain);
+                    LOG_DBG("Sensor %s: rtd_tc = %f, r_ref = %f, r_nom = %f, gain = %f", config_ptr->sensors[i].id, (double)rtd_tc, (double)r_ref, (double)r_nom, (double)gain);
                     
                     int32_t max_count = (1 << (config_ptr->sensors[i].adc_resolution - 1)) - 1;
 

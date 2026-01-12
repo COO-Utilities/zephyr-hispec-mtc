@@ -116,7 +116,7 @@ int control_loop_init(const thermal_config_t *config)
                          cfg->heater_power_limit_max);
 
             LOG_INF("Loop %s: PID initialized (P=%.2f, I=%.2f, D=%.2f)",
-                    cfg->id, cfg->p_gain, cfg->i_gain, cfg->d_gain);
+                    cfg->id, (double)cfg->p_gain, (double)cfg->i_gain, (double)cfg->d_gain);
         } else {
             LOG_WRN("Loop %s: Only PID algorithm supported currently", cfg->id);
         }
@@ -159,8 +159,8 @@ int control_loop_update_all(float dt_seconds)
             measured_temp > loop_state[i].alarm_max_temp) {
             loop_state[i].status = LOOP_STATUS_ALARM;
             LOG_ERR("Loop %s: ALARM - Temperature %.2f K out of range (%.2f - %.2f)",
-                    loop_state[i].id, measured_temp,
-                    loop_state[i].alarm_min_temp, loop_state[i].alarm_max_temp);
+                    loop_state[i].id, (double)measured_temp,
+                    (double)loop_state[i].alarm_min_temp, (double)loop_state[i].alarm_max_temp);
             errors++;
             /* Continue to allow controlled shutdown */
         }
@@ -202,7 +202,7 @@ int control_loop_update_all(float dt_seconds)
         }
 
         LOG_INF("Loop %s: SP=%.2f, PV=%.2f, OUT=%.2f W",
-                loop_state[i].id, setpoint, measured_temp, output);
+                loop_state[i].id, (double)setpoint, (double)measured_temp, (double)output);
 
         loop_state[i].status = LOOP_STATUS_OK;
     }
@@ -237,7 +237,7 @@ int control_loop_set_target(const char *loop_id, float target_kelvin)
     /* TODO: Validate against valid_setpoint_range */
 
     loop_state[idx].target_temp_kelvin = target_kelvin;
-    LOG_INF("Loop %s: Target set to %.2f K", loop_id, target_kelvin);
+    LOG_INF("Loop %s: Target set to %.2f K", loop_id, (double)target_kelvin);
 
     k_mutex_unlock(&control_mutex);
     return 0;
@@ -379,7 +379,7 @@ int control_loop_set_gains(const char *loop_id, float kp, float ki, float kd)
     /* Update PID gains using coo_commons function */
     coo_pid_set_gains(&loop_state[idx].pid, kp, ki, kd);
 
-    LOG_INF("Loop %s: Gains updated to P=%.2f, I=%.2f, D=%.2f", loop_id, kp, ki, kd);
+    LOG_INF("Loop %s: Gains updated to P=%.2f, I=%.2f, D=%.2f", loop_id, (double)kp, (double)ki, (double)kd);
 
     k_mutex_unlock(&control_mutex);
     return 0;

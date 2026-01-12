@@ -1,0 +1,5 @@
+/*
+ * Devicetree overlay for NUCLEO-H563ZI
+ */
+
+/* Empty overlay - Ethernet PHY is already configured in board DTS */
