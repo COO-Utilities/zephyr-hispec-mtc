@@ -27,7 +27,7 @@ static coo_network_event_cb_t user_event_cb = NULL;
 static struct net_mgmt_event_callback net_l4_mgmt_cb;
 
 static void net_l4_evt_handler(struct net_mgmt_event_callback *cb,
-                                uint32_t mgmt_event,
+                                uint64_t mgmt_event,
                                 struct net_if *iface)
 {
 	switch (mgmt_event) {
@@ -157,26 +157,26 @@ int coo_net_tcp_socket_create(uint16_t port, bool is_server)
 	struct sockaddr_in addr;
 	int optval = 1;
 
-	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	sock = zsock_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock < 0) {
 		return -errno;
 	}
 
 	/* Set socket options */
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	zsock_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
 	if (is_server) {
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
 		addr.sin_addr.s_addr = INADDR_ANY;
 
-		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			close(sock);
+		if (zsock_bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			zsock_close(sock);
 			return -errno;
 		}
 
-		if (listen(sock, 5) < 0) {
-			close(sock);
+		if (zsock_listen(sock, 5) < 0) {
+			zsock_close(sock);
 			return -errno;
 		}
 	}
@@ -190,36 +190,36 @@ int coo_net_udp_socket_create(uint16_t port)
 	struct sockaddr_in addr;
 	int optval = 1;
 
-	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0) {
 		return -errno;
 	}
 
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	zsock_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
 	addr.sin_addr.s_addr = INADDR_ANY;
 
-	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		close(sock);
+	if (zsock_bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		zsock_close(sock);
 		return -errno;
 	}
 
 	return sock;
 }
 
-int coo_net_tcp_connect(int sockfd, const struct sockaddr *addr, int timeout_ms)
+int coo_net_tcp_zsock_connect(int sockfd, const struct sockaddr *addr, int timeout_ms)
 {
 	struct timeval timeout;
 
 	timeout.tv_sec = timeout_ms / 1000;
 	timeout.tv_usec = (timeout_ms % 1000) * 1000;
 
-	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-	setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+	zsock_setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	zsock_setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
-	if (connect(sockfd, addr, sizeof(struct sockaddr_in)) < 0) {
+	if (zsock_connect(sockfd, addr, sizeof(struct sockaddr_in)) < 0) {
 		return -errno;
 	}
 
@@ -232,7 +232,7 @@ int coo_net_send_retry(int sockfd, const void *buf, size_t len, int max_retries)
 	int retries = 0;
 
 	while (retries < max_retries) {
-		ret = send(sockfd, buf, len, 0);
+		ret = zsock_send(sockfd, buf, len, 0);
 		if (ret >= 0) {
 			return ret;
 		}
@@ -255,7 +255,7 @@ int coo_net_recv_timeout(int sockfd, void *buf, size_t len, int timeout_ms)
 	timeout.tv_sec = timeout_ms / 1000;
 	timeout.tv_usec = (timeout_ms % 1000) * 1000;
 
-	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	zsock_setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
-	return recv(sockfd, buf, len, 0);
+	return zsock_recv(sockfd, buf, len, 0);
 }
