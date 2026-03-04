@@ -1,0 +1,79 @@
+/*
+ * Devicetree overlay for NUCLEO-H563ZI:
+ * - AD7124 ADC on SPI1
+ */
+
+/ {
+    aliases {
+        sensor-test = &sensor_test_node;
+    };
+
+    sensor_test_node: zephyr,user {
+        io-channels = <&ad7124_dev 0>,
+                      <&ad7124_dev 1>,
+                      <&ad7124_dev 2>,
+                      <&ad7124_dev 3>;
+    };
+};
+
+&spi1 {
+    status = "okay";
+
+    ad7124_dev: ad7124@0 {
+        compatible = "adi,ad7124-adc";
+        status = "okay";
+        reg = <0>;
+        spi-max-frequency = <1000000>;
+        power-mode = <2>;
+        active-device = <1>;
+
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        #io-channel-cells = <1>;
+
+        channel@0 {
+            reg = <0>;
+            zephyr,gain = "ADC_GAIN_4";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,current-source-pin = [ 03 01 ];
+            zephyr,input-positive = <2>;
+            zephyr,input-negative = <3>;
+        };
+
+        channel@1 {
+            reg = <1>;
+            zephyr,gain = "ADC_GAIN_4";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,current-source-pin = [ 03 04 ];
+            zephyr,input-positive = <5>;
+            zephyr,input-negative = <6>;
+        };
+
+        channel@2 {
+            reg = <2>;
+            zephyr,gain = "ADC_GAIN_4";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,current-source-pin = [ 03 08 ];
+            zephyr,input-positive = <9>;
+            zephyr,input-negative = <10>;
+        };
+
+        channel@3 {
+            reg = <3>;
+            zephyr,gain = "ADC_GAIN_4";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,current-source-pin = [ 03 0B ];
+            zephyr,input-positive = <12>;
+            zephyr,input-negative = <13>;
+        };
+    };
+};
