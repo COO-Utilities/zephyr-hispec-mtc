@@ -391,14 +391,18 @@ int control_loop_get_gains(const char *loop_id, float *kp, float *ki, float *kd)
         return -1;
     }
 
+    k_mutex_lock(&control_mutex, K_FOREVER);
+
     for (int i = 0; i < num_loops; i++) {
         if (strcmp(loop_state[i].id, loop_id) == 0) {
             *kp = loop_state[i].pid.kp;
             *ki = loop_state[i].pid.ki;
             *kd = loop_state[i].pid.kd;
+            k_mutex_unlock(&control_mutex);
             return 0;
         }
     }
 
+    k_mutex_unlock(&control_mutex);
     return -2;
 }
