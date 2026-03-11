@@ -90,4 +90,14 @@ loop_status_t control_loop_get_status(const char *loop_id);
  */
 int control_loop_set_gains(const char *loop_id, float kp, float ki, float kd);
 
+/**
+ * Get current PID gains for a loop
+ * @param loop_id Loop ID string
+ * @param kp Pointer to store proportional gain
+ * @param ki Pointer to store integral gain
+ * @param kd Pointer to store derivative gain
+ * @return 0 on success, negative error code on failure
+ */
+int control_loop_get_gains(const char *loop_id, float *kp, float *ki, float *kd);
+
 #endif /* CONTROL_LOOP_H */
