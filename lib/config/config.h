@@ -11,12 +11,36 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* These numbers are not permanent */
-#define MAX_SENSORS 16
-#define MAX_HEATERS 16
+/* System limits - configurable via Kconfig (COO_MAX_SENSORS, etc.) */
+#ifdef CONFIG_COO_MAX_SENSORS
+#define MAX_SENSORS CONFIG_COO_MAX_SENSORS
+#else
+#define MAX_SENSORS 100
+#endif
+
+#ifdef CONFIG_COO_MAX_HEATERS
+#define MAX_HEATERS CONFIG_COO_MAX_HEATERS
+#else
+#define MAX_HEATERS 20
+#endif
+
+#ifdef CONFIG_COO_MAX_CONTROL_LOOPS
+#define MAX_CONTROL_LOOPS CONFIG_COO_MAX_CONTROL_LOOPS
+#else
 #define MAX_CONTROL_LOOPS 8
-#define MAX_SENSORS_PER_LOOP 4
+#endif
+
+#ifdef CONFIG_COO_MAX_SENSORS_PER_LOOP
+#define MAX_SENSORS_PER_LOOP CONFIG_COO_MAX_SENSORS_PER_LOOP
+#else
+#define MAX_SENSORS_PER_LOOP 20
+#endif
+
+#ifdef CONFIG_COO_MAX_HEATERS_PER_LOOP
+#define MAX_HEATERS_PER_LOOP CONFIG_COO_MAX_HEATERS_PER_LOOP
+#else
 #define MAX_HEATERS_PER_LOOP 4
+#endif
 #define MAX_ID_LENGTH 32
 #define MAX_LOCATION_LENGTH 64
 #define MAX_PATH_LENGTH 128
