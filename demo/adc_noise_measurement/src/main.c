@@ -44,16 +44,16 @@ int main(void)
     config->heaters[0].regulator_dev = DEVICE_DT_GET(DT_ALIAS(heater_test));
     config->heaters[0].enabled = true;
 
+	/* The heater only provides a load for noise-under-load measurements, so
+	 * carry on without it: the ADC characterisation is the point here. */
 	ret = heater_manager_init(config);
 	if (ret < 0) {
-		LOG_ERR("Failed to initialize heater manager (%d)", ret);
-		return 0;
-	}
-
-	ret = heater_manager_set_power("high-power-1", 5.0f);
-	if (ret < 0) {
-		LOG_ERR("Failed to set heater power (%d)", ret);
-		return 0;
+		LOG_WRN("No heater manager (%d), measuring ADC noise unloaded", ret);
+	} else {
+		ret = heater_manager_set_power("high-power-1", 5.0f);
+		if (ret < 0) {
+			LOG_WRN("No heater power (%d), measuring ADC noise unloaded", ret);
+		}
 	}
 
 
