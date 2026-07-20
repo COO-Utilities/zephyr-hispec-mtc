@@ -3,8 +3,8 @@
 | Field           | Value                              |
 |-----------------|------------------------------------|
 | Document ID     | ICD-TC-001                         |
-| Version         | 2.0                                |
-| Date            | 2026-03-11                         |
+| Version         | 3.0                                |
+| Date            | 2026-07-20                         |
 | System          | COO Thermal Controller (Zephyr)    |
 | Interface       | MQTT over TCP                      |
 
@@ -88,14 +88,9 @@ Clients can query and update broker settings at runtime. Changes take effect on 
 
 #### 2.3.1 Get Network Status
 
-**Topic:** `coo/system/cmd`
+**Topic:** `cmd/hstempctrl/req/network` — query only (empty payload)
 
-**Request:**
-```json
-{"cmd": "get_network"}
-```
-
-**Response (Topic: `coo/system/resp`):**
+**Response (Topic: `cmd/hstempctrl/resp/network`):**
 ```json
 {
   "status": "OK",
@@ -117,22 +112,23 @@ Clients can query and update broker settings at runtime. Changes take effect on 
 | `broker_port`    | integer | MQTT broker port                     |
 | `mqtt_connected` | boolean | `true` if MQTT session is active     |
 
-#### 2.3.2 Set Broker
+#### 2.3.2 Get / Set Broker
 
-**Topic:** `coo/system/cmd`
+**Topic:** `cmd/hstempctrl/req/broker`
 
-**Request:**
+**Query** — empty payload, returns the current broker.
+
+**Effect request:**
 ```json
-{"cmd": "set_broker", "hostname": "10.0.0.5", "port": 1883}
+{"hostname": "10.0.0.5", "port": 1883}
 ```
 
 | Field      | Type    | Required | Description                      |
 |------------|---------|----------|----------------------------------|
-| `cmd`      | string  | Yes      | Must be `"set_broker"`           |
 | `hostname` | string  | Yes      | Broker hostname or IP            |
 | `port`     | integer | No       | Broker port (default: 1883)      |
 
-**Response (Topic: `coo/system/resp`):**
+**Response (Topic: `cmd/hstempctrl/resp/broker`):**
 ```json
 {"status": "OK", "broker": "10.0.0.5", "port": 1883}
 ```
@@ -141,41 +137,62 @@ Clients can query and update broker settings at runtime. Changes take effect on 
 
 ## 3. MQTT Topic Map
 
-Topics are organized into a hierarchy. Loop-specific topics are parameterized by `{loop_id}`.
+Topics are role-first: `cmd/` carries the request/response traffic, `dt/` carries everything the
+controller publishes on its own initiative. The second segment is the device name, so several
+COO controllers can share one broker without colliding.
+
+**Device name:** `hstempctrl`
+
+The command name is part of the topic, not the payload. Loop-specific topics are parameterized
+by `{loop_id}`.
 
 ### 3.1 System Topics
 
-| Topic                  | Direction            | QoS | Description                        |
-|------------------------|----------------------|-----|------------------------------------|
-| `coo/system/cmd`       | Client -> Controller | 1   | System-level commands              |
-| `coo/system/resp`      | Controller -> Client | 0   | System-level responses             |
-| `coo/system/status`    | Controller -> Client | 0   | System health / network heartbeat  |
+| Topic                             | Direction            | QoS | Description                       |
+|-----------------------------------|----------------------|-----|-----------------------------------|
+| `cmd/hstempctrl/req/{key}`        | Client -> Controller | 1   | System-level command              |
+| `cmd/hstempctrl/resp/{key}`       | Controller -> Client | 0   | Its response                      |
+| `dt/hstempctrl/status`            | Controller -> Client | 0   | System health / network heartbeat |
+| `dt/hstempctrl/warning`           | Controller -> Client | 1   | Alarms and emergency stop notices  |
 
 ### 3.2 Per-Loop Topics
 
-| Topic                              | Direction            | QoS | Description                     |
-|------------------------------------|----------------------|-----|---------------------------------|
-| `coo/{loop_id}/cmd`               | Client -> Controller | 1   | Loop commands                   |
-| `coo/{loop_id}/resp`              | Controller -> Client | 0   | Loop command responses          |
-| `coo/{loop_id}/telemetry`         | Controller -> Client | 0   | Periodic loop telemetry         |
+| Topic                                        | Direction            | QoS | Description             |
+|----------------------------------------------|----------------------|-----|-------------------------|
+| `cmd/hstempctrl/req/loop/{loop_id}/{key}`    | Client -> Controller | 1   | Loop command            |
+| `cmd/hstempctrl/resp/loop/{loop_id}/{key}`   | Controller -> Client | 0   | Its response            |
+| `dt/hstempctrl/loop/{loop_id}/telemetry`     | Controller -> Client | 0   | Periodic loop telemetry |
 
 **Example for loop `loop-1`:**
-- `coo/loop-1/cmd`
-- `coo/loop-1/resp`
-- `coo/loop-1/telemetry`
+- `cmd/hstempctrl/req/loop/loop-1/target`
+- `cmd/hstempctrl/resp/loop/loop-1/target`
+- `dt/hstempctrl/loop/loop-1/telemetry`
 
-### 3.3 Wildcard Subscriptions
+### 3.3 Query and Effect
 
-Clients can subscribe to all loops using MQTT wildcards:
-- `coo/+/telemetry` — all loop telemetry
-- `coo/+/resp` — all loop responses
-- `coo/#` — everything
+A single key serves both reads and writes. The controller distinguishes them by payload:
+
+| Request | Class  | Meaning                                    |
+|---------|--------|--------------------------------------------|
+| Empty payload (or `{}`) | Query  | Return the current value; change nothing |
+| Payload with fields     | Effect | Apply the change, then confirm it        |
+
+So `cmd/hstempctrl/req/loop/loop-1/gains` with no payload reads the gains, and the same topic
+with `{"kp": 8.0, "ki": 0.2, "kd": 1.5}` sets them. Keys documented below as **query only**
+reject a payload; keys documented as **effect only** require one.
+
+### 3.4 Wildcard Subscriptions
+
+- `cmd/hstempctrl/req/#` — every inbound command (this is what the controller subscribes to)
+- `dt/hstempctrl/#` — everything this controller publishes
+- `dt/hstempctrl/loop/+/telemetry` — telemetry from all loops on this controller
+- `dt/#` — telemetry and warnings from every device on the broker
 
 ---
 
 ## 4. Per-Loop Telemetry
 
-**Topic:** `coo/{loop_id}/telemetry`
+**Topic:** `dt/hstempctrl/loop/{loop_id}/telemetry`
 **Direction:** Controller -> Client
 **Rate:** Configurable (default: every 2 seconds)
 **QoS:** 0
@@ -235,18 +252,21 @@ Clients can subscribe to all loops using MQTT wildcards:
 
 ## 5. Per-Loop Commands
 
-All per-loop commands are sent to `coo/{loop_id}/cmd` and responses arrive on `coo/{loop_id}/resp`.
+All per-loop commands are sent to `cmd/hstempctrl/req/loop/{loop_id}/{key}` and responses arrive
+on `cmd/hstempctrl/resp/loop/{loop_id}/{key}`. Per Section 3.3, an empty payload queries and a
+populated payload applies a change.
 
-### 5.1 Set Target Temperature
+### 5.1 `target` — Target Temperature
 
-**Request:**
+**Query** — empty payload.
+
+**Effect request:**
 ```json
-{"cmd": "set_target", "value": 35.0}
+{"value": 35.0}
 ```
 
 | Field   | Type  | Unit | Range               | Required | Description                |
 |---------|-------|------|---------------------|----------|----------------------------|
-| `cmd`   | string| -    | -                   | Yes      | Must be `"set_target"`     |
 | `value` | float | C    | `valid_setpoint_range` | Yes   | Desired target temperature |
 
 When a ramp rate is configured, the setpoint transitions gradually toward the target. The telemetry `setpoint` field reflects the current ramped value, while `target_setpoint` shows the final target.
@@ -264,18 +284,19 @@ When a ramp rate is configured, the setpoint transitions gradually toward the ta
 
 ---
 
-### 5.2 Set Ramp Rate
+### 5.2 `ramp_rate` — Setpoint Ramp Rate
 
 Controls how fast the setpoint moves toward a new target. A value of `0` disables ramping (instantaneous step change).
 
-**Request:**
+**Query** — empty payload.
+
+**Effect request:**
 ```json
-{"cmd": "set_ramp_rate", "value": 2.0}
+{"value": 2.0}
 ```
 
 | Field   | Type   | Unit  | Range    | Required | Description                                  |
 |---------|--------|-------|----------|----------|----------------------------------------------|
-| `cmd`   | string | -     | -        | Yes      | Must be `"set_ramp_rate"`                    |
 | `value` | float  | C/min | >= 0     | Yes      | Setpoint change rate limit. `0` = no ramp.   |
 
 **Response:**
@@ -285,26 +306,9 @@ Controls how fast the setpoint moves toward a new target. A value of `0` disable
 
 ---
 
-### 5.3 Get Ramp Rate
+### 5.3 `status` — Loop Status
 
-**Request:**
-```json
-{"cmd": "get_ramp_rate"}
-```
-
-**Response:**
-```json
-{"status": "OK", "ramp_rate": 2.00}
-```
-
----
-
-### 5.4 Get Status
-
-**Request:**
-```json
-{"cmd": "get_status"}
-```
+**Query only** — empty payload.
 
 **Response:**
 ```json
@@ -332,16 +336,17 @@ Controls how fast the setpoint moves toward a new target. A value of `0` disable
 
 ---
 
-### 5.5 Set PID Gains
+### 5.4 `gains` — PID Gains
 
-**Request:**
+**Query** — empty payload.
+
+**Effect request:**
 ```json
-{"cmd": "set_gains", "kp": 8.0, "ki": 0.2, "kd": 1.5}
+{"kp": 8.0, "ki": 0.2, "kd": 1.5}
 ```
 
 | Field | Type   | Default | Required | Description         |
 |-------|--------|---------|----------|---------------------|
-| `cmd` | string | -       | Yes      | Must be `"set_gains"` |
 | `kp`  | float  | 5.0     | Yes      | Proportional gain   |
 | `ki`  | float  | 0.1     | Yes      | Integral gain       |
 | `kd`  | float  | 1.0     | Yes      | Derivative gain     |
@@ -353,30 +358,17 @@ Controls how fast the setpoint moves toward a new target. A value of `0` disable
 
 ---
 
-### 5.6 Get PID Gains
+### 5.5 `enable` — Enable / Disable Control Loop
 
-**Request:**
+**Query** — empty payload, returns the current state.
+
+**Effect request:**
 ```json
-{"cmd": "get_gains"}
+{"value": 1}
 ```
 
-**Response:**
-```json
-{"status": "OK", "kp": 5.00, "ki": 0.10, "kd": 1.00}
-```
-
----
-
-### 5.7 Enable / Disable Control Loop
-
-**Request:**
-```json
-{"cmd": "enable", "value": 1}
-```
-
-| Field   | Type   | Range | Required | Description                  |
-|---------|--------|-------|----------|------------------------------|
-| `cmd`   | string | -     | Yes      | Must be `"enable"`           |
+| Field   | Type   | Range | Required | Description                 |
+|---------|--------|-------|----------|-----------------------------|
 | `value` | int    | 0, 1  | Yes      | `1` = enable, `0` = disable |
 
 When a loop is disabled, all associated heaters are set to 0% power and the PID integrator is reset.
@@ -388,19 +380,20 @@ When a loop is disabled, all associated heaters are set to 0% power and the PID 
 
 ---
 
-### 5.8 Set Telemetry Rate
+### 5.6 `telemetry_rate` — Telemetry Publish Interval
 
 Controls how often telemetry is published for this loop.
 
-**Request:**
+**Query** — empty payload.
+
+**Effect request:**
 ```json
-{"cmd": "set_telemetry_rate", "value": 5000}
+{"value": 5000}
 ```
 
-| Field   | Type    | Unit | Range         | Required | Description                     |
-|---------|---------|------|---------------|----------|---------------------------------|
-| `cmd`   | string  | -    | -             | Yes      | Must be `"set_telemetry_rate"`  |
-| `value` | integer | ms   | 500 - 60000   | Yes      | Telemetry publish interval      |
+| Field   | Type    | Unit | Range         | Required | Description                |
+|---------|---------|------|---------------|----------|----------------------------|
+| `value` | integer | ms   | 500 - 60000   | Yes      | Telemetry publish interval |
 
 **Response:**
 ```json
@@ -411,14 +404,12 @@ Controls how often telemetry is published for this loop.
 
 ## 6. System Commands
 
-System commands are sent to `coo/system/cmd` with responses on `coo/system/resp`.
+System commands are sent to `cmd/hstempctrl/req/{key}` with responses on
+`cmd/hstempctrl/resp/{key}`. They carry no `loop/{loop_id}` segment.
 
-### 6.1 List Loops
+### 6.1 `loops` — List Loops
 
-**Request:**
-```json
-{"cmd": "list_loops"}
-```
+**Query only** — empty payload.
 
 **Response:**
 ```json
@@ -431,12 +422,9 @@ System commands are sent to `coo/system/cmd` with responses on `coo/system/resp`
 }
 ```
 
-### 6.2 List Sensors
+### 6.2 `sensors` — List Sensors
 
-**Request:**
-```json
-{"cmd": "list_sensors"}
-```
+**Query only** — empty payload.
 
 **Response:**
 ```json
@@ -449,12 +437,9 @@ System commands are sent to `coo/system/cmd` with responses on `coo/system/resp`
 }
 ```
 
-### 6.3 List Heaters
+### 6.3 `heaters` — List Heaters
 
-**Request:**
-```json
-{"cmd": "list_heaters"}
-```
+**Query only** — empty payload.
 
 **Response:**
 ```json
@@ -467,49 +452,46 @@ System commands are sent to `coo/system/cmd` with responses on `coo/system/resp`
 }
 ```
 
-### 6.4 Emergency Stop
+### 6.4 `emergency_stop` — Emergency Stop
 
-Immediately sets all heaters to 0% power and disables all control loops.
+Immediately sets all heaters to 0% power and disables all control loops. Also published as a
+warning on `dt/hstempctrl/warning`.
 
-**Request:**
-```json
-{"cmd": "emergency_stop"}
-```
+**Effect only** — send an empty payload to trigger.
 
 **Response:**
 ```json
 {"status": "OK", "all_heaters": "off", "all_loops": "disabled"}
 ```
 
-### 6.5 Get / Set Network (see Section 2.3)
+### 6.5 `network` / `broker` — Network Configuration (see Section 2.3)
 
 ---
 
 ## 7. Command Summary
 
-### 7.1 Per-Loop Commands (`coo/{loop_id}/cmd`)
+### 7.1 Per-Loop Keys (`cmd/hstempctrl/req/loop/{loop_id}/{key}`)
 
-| Command              | Key Request Fields           | Key Response Fields                                   |
-|----------------------|------------------------------|-------------------------------------------------------|
-| `set_target`         | `value` (C)                  | `target`, `ramp_rate`                                 |
-| `get_status`         | _(none)_                     | `temperature`, `setpoint`, `target_setpoint`, `ramp_active`, `ramp_rate`, `error`, `power`, `sensors[]`, `heaters[]` |
-| `set_gains`          | `kp`, `ki`, `kd`            | `kp`, `ki`, `kd`                                     |
-| `get_gains`          | _(none)_                     | `kp`, `ki`, `kd`                                     |
-| `enable`             | `value` (0/1)                | `enabled`                                             |
-| `set_ramp_rate`      | `value` (C/min)              | `ramp_rate`                                           |
-| `get_ramp_rate`      | _(none)_                     | `ramp_rate`                                           |
-| `set_telemetry_rate` | `value` (ms)                 | `telemetry_rate_ms`                                   |
+| Key              | Class       | Effect Request Fields | Key Response Fields                                   |
+|------------------|-------------|-----------------------|-------------------------------------------------------|
+| `target`         | query/effect| `value` (C)           | `target`, `ramp_rate`                                 |
+| `status`         | query only  | _(n/a)_               | `temperature`, `setpoint`, `target_setpoint`, `ramp_active`, `ramp_rate`, `error`, `power`, `sensors[]`, `heaters[]` |
+| `gains`          | query/effect| `kp`, `ki`, `kd`      | `kp`, `ki`, `kd`                                      |
+| `enable`         | query/effect| `value` (0/1)         | `enabled`                                             |
+| `ramp_rate`      | query/effect| `value` (C/min)       | `ramp_rate`                                           |
+| `telemetry_rate` | query/effect| `value` (ms)          | `telemetry_rate_ms`                                   |
 
-### 7.2 System Commands (`coo/system/cmd`)
+### 7.2 System Keys (`cmd/hstempctrl/req/{key}`)
 
-| Command          | Key Request Fields         | Key Response Fields                              |
-|------------------|----------------------------|--------------------------------------------------|
-| `list_loops`     | _(none)_                   | `loops[]`                                        |
-| `list_sensors`   | _(none)_                   | `sensors[]`                                      |
-| `list_heaters`   | _(none)_                   | `heaters[]`                                      |
-| `emergency_stop` | _(none)_                   | `all_heaters`, `all_loops`                       |
-| `get_network`    | _(none)_                   | `ip`, `netmask`, `gateway`, `broker`, `broker_port`, `mqtt_connected` |
-| `set_broker`     | `hostname`, `port`         | `broker`, `port`                                 |
+| Key              | Class        | Effect Request Fields | Key Response Fields                              |
+|------------------|--------------|-----------------------|--------------------------------------------------|
+| `loops`          | query only   | _(n/a)_               | `loops[]`                                        |
+| `sensors`        | query only   | _(n/a)_               | `sensors[]`                                      |
+| `heaters`        | query only   | _(n/a)_               | `heaters[]`                                      |
+| `emergency_stop` | effect only  | _(empty)_             | `all_heaters`, `all_loops`                       |
+| `network`        | query only   | _(n/a)_               | `ip`, `netmask`, `gateway`, `broker`, `broker_port`, `mqtt_connected` |
+| `broker`         | query/effect | `hostname`, `port`    | `broker`, `port`                                 |
+
 
 ---
 
@@ -716,14 +698,16 @@ All control loop and sensor/heater state is protected by mutexes. MQTT command c
 Client                    Broker                  Controller
   |                         |                         |
   |-- PUBLISH ------------->|                         |
-  |   coo/loop-1/cmd        |-- DELIVER ------------->|
-  |   {"cmd":"set_target",  |                         |
-  |    "value":50.0}        |                   [mutex lock]
-  |                         |                   [set target_setpoint=50.0]
+  |   topic:                |-- DELIVER ------------->|
+  |   cmd/hstempctrl/req/   |                         |
+  |     loop/loop-1/target  |                   [mutex lock]
+  |   {"value":50.0}        |                   [set target_setpoint=50.0]
   |                         |                   [ramp_active=true]
   |                         |                   [mutex unlock]
   |                         |<-- PUBLISH -------------|
-  |<-- DELIVER -------------|   coo/loop-1/resp       |
+  |<-- DELIVER -------------|   topic:                |
+  |                         |   cmd/hstempctrl/resp/  |
+  |                         |     loop/loop-1/target  |
   |                         |   {"status":"OK",       |
   |                         |    "target":50.0,       |
   |                         |    "ramp_rate":2.0}     |
@@ -737,14 +721,16 @@ Client                    Broker                  Controller
   :         ...ramp continues...                      :
   |                         |                         |
   |                         |<-- PUBLISH -------------|
-  |<-- DELIVER -------------|   coo/loop-1/telemetry  |
-  |  {"loop_id":"loop-1",  |                         |
-  |   "temperature":31.2,  |                         |
-  |   "setpoint":32.0,     |                         |
-  |   "target_setpoint":50.0,                        |
-  |   "ramp_active":true,  |                         |
-  |   "sensors":[...],     |                         |
-  |   "heaters":[...]}     |                         |
+  |<-- DELIVER -------------|   topic:                |
+  |                         |   dt/hstempctrl/        |
+  |                         |     loop/loop-1/telemetry
+  |   {"loop_id":"loop-1",  |                         |
+  |    "temperature":31.2,  |                         |
+  |    "setpoint":32.0,     |                         |
+  |    "target_setpoint":50.0,                        |
+  |    "ramp_active":true,  |                         |
+  |    "sensors":[...],     |                         |
+  |    "heaters":[...]}     |                         |
 ```
 
 ### 13.2 Multi-Sensor Averaging
@@ -798,3 +784,4 @@ Control Thread
 |---------|------------|--------|----------------------------------------------------------------|
 | 1.0     | 2026-03-11 | -      | Initial release (single loop)                                  |
 | 2.0     | 2026-03-11 | -      | Multi-loop/sensor/heater support, ramp rate, network config, system commands |
+| 3.0     | 2026-07-20 | -      | Role-first device-scoped topics (`cmd/hstempctrl/…`, `dt/hstempctrl/…`); command name moved from payload into the topic key; get/set pairs collapsed into single keys disambiguated by payload presence |
