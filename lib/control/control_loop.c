@@ -13,8 +13,6 @@
 
 LOG_MODULE_REGISTER(control_loop, LOG_LEVEL_INF);
 
-#define MAX_CONTROL_LOOPS 8
-
 /* Control loop runtime state */
 static struct {
     char id[MAX_ID_LENGTH];
