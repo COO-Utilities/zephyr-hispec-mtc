@@ -3,3 +3,38 @@ config COO_CONFIG_LIB
     default y
     help
       Enable the COO Thermal Controller Configuration library.
+
+config COO_MAX_SENSORS
+    int "Maximum number of sensors"
+    default 100
+    depends on COO_CONFIG_LIB
+    help
+      Maximum number of sensors the system can manage.
+
+config COO_MAX_HEATERS
+    int "Maximum number of heaters"
+    default 20
+    depends on COO_CONFIG_LIB
+    help
+      Maximum number of heaters the system can manage.
+
+config COO_MAX_CONTROL_LOOPS
+    int "Maximum number of control loops"
+    default 8
+    depends on COO_CONFIG_LIB
+    help
+      Maximum number of independent PID control loops.
+
+config COO_MAX_SENSORS_PER_LOOP
+    int "Maximum sensors per control loop"
+    default 20
+    depends on COO_CONFIG_LIB
+    help
+      Maximum number of sensors that can feed into a single control loop.
+
+config COO_MAX_HEATERS_PER_LOOP
+    int "Maximum heaters per control loop"
+    default 4
+    depends on COO_CONFIG_LIB
+    help
+      Maximum number of heaters driven by a single control loop.
