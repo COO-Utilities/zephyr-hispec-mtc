@@ -93,7 +93,8 @@ int main(void)
     uint32_t duration = end_time - start_time;
     printf("Total Time: %u ms\n", duration);
     if(duration > 0) {
-        printf("Frequency: %.2f Hz\n", (float)(sample_count * ARRAY_SIZE(adc_channels)) * 1000.0f / (float)duration);
+        printf("Frequency: %.2f Hz\n",
+               (double)(sample_count * ARRAY_SIZE(adc_channels)) * 1000.0 / (double)duration);
     }
 
     while(1) {
