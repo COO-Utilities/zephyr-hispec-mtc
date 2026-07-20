@@ -49,8 +49,9 @@ static int publish(const char *topic, const char *payload)
 /**
  * Callback for received MQTT messages
  */
-static void on_message(const struct mqtt_publish_param *pub)
+static void on_message(const struct mqtt_publish_param *pub, void *user_data)
 {
+	ARG_UNUSED(user_data);
 	const char *topic = pub->message.topic.topic.utf8;
 	const char *payload = pub->message.payload.data;
 	size_t topic_len = pub->message.topic.topic.size;
@@ -143,7 +144,7 @@ int main(void)
 
 	/* Set up subscription and callback */
 	coo_mqtt_add_subscription(TOPIC_CMD, MQTT_QOS_0_AT_MOST_ONCE);
-	coo_mqtt_set_message_callback(on_message);
+	coo_mqtt_set_message_callback(on_message, NULL);
 
 	/* Connect to broker (blocks until connected) */
 	LOG_INF("Connecting to MQTT broker...");
