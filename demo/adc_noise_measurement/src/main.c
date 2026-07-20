@@ -15,6 +15,15 @@
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
+/* PT1000 front-end calibration: 5.11k reference, 24-bit bipolar.
+ * Gain caps the measurable resistance at R_REF/gain, so PT1000 needs 4x
+ * (~1277 ohm ceiling); 8x would clip at ~638 ohm and 16x at ~319 ohm. */
+#define RTD_REFERENCE_OHMS   5110.0f
+#define ADC_GAIN             4.0f
+#define ADC_RESOLUTION_BITS  24
+#define RTD_NOMINAL_OHMS     1000.0f
+#define RTD_TEMP_COEFFICIENT 3850.0f
+
 #if DT_NODE_HAS_STATUS(DT_ALIAS(sensor_test), okay)
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_ALIAS(sensor_test));
 #endif
@@ -22,7 +31,6 @@ static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_ALIAS(sensor_te
 int main(void)
 {
 	int ret;
-    // printk("=== ADC Noise Measurement Demo Booting ===\n");
 	thermal_config_t *config = config_load_defaults();
     if (!config) {
         LOG_ERR("Failed to load default config");
@@ -48,17 +56,14 @@ int main(void)
 		return 0;
 	}
 
-	// k_sleep(K_MSEC(5000));
 
 #if DT_NODE_HAS_STATUS(DT_ALIAS(sensor_test), okay)
-	// int ret;
 	int32_t buf;
 	struct adc_sequence sequence = {
 		.buffer = &buf,
 		.buffer_size = sizeof(buf),
 	};
 
-	// LOG_INF("ADC Noise Measurement Demo Starting");
 
 	if (!adc_is_ready_dt(&adc_channel)) {
 		LOG_ERR("ADC controller device %s not ready", adc_channel.dev->name);
@@ -77,7 +82,6 @@ int main(void)
 		return 0;
 	}
 
-	// LOG_INF("Starting ADC sampling loop...");
 
 	printf("raw,resistance\n");
 
@@ -93,8 +97,6 @@ int main(void)
         // Command: Write (0x00) | Address (0x21) -> 0x21
         // Data: 0x06, 0x07, 0xFF
         uint8_t write_tx_buf[4] = {0x21, 0x06, 0x07, 0xFF};
-        // uint8_t write_tx_buf[4] = {0x21, 0x06, 0x03, 0xC0};
-        // uint8_t write_tx_buf[4] = {0x21, 0x06, 0x00, 0x01};
         struct spi_buf write_tx_bufs[] = {{.buf = write_tx_buf, .len = 4}};
         struct spi_buf_set write_tx_set = {.buffers = write_tx_bufs, .count = 1};
         
@@ -108,7 +110,6 @@ int main(void)
         k_sleep(K_MSEC(10)); // Short delay
         
         uint8_t tx_buf[2];
-        // uint8_t rx_buf[4]; // Status + 3 bytes data sent down below.
         
         // Read Filter Register 0 (Address 0x21)
         // Command: Read (0x40) | Address (0x21)
@@ -148,15 +149,9 @@ int main(void)
 
     uint32_t start_time = k_uptime_get_32();
     int sample_count = 5000;
-    // int sample_count = 1000;
-    // int sample_count = 100;
-    // int sample_count = 60;
 
 	for (int i = 0; i < sample_count; i++) {
-	// for (int i = 0; i < 1000; i++) {
-        // LOG_INF("Calling adc_read...");
 		ret = adc_read(adc_channel.dev, &sequence);
-        // LOG_INF("adc_read returned: %d", ret);
 
 		if (ret < 0) {
 			LOG_ERR("Could not read (%d)", ret);
@@ -164,7 +159,6 @@ int main(void)
 		}
 		
 		int32_t val_mv = buf;
-		// LOG_INF("Raw: %d", val_mv);
 		
 		ret = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
 		if (ret < 0) {
@@ -175,32 +169,16 @@ int main(void)
               * We primarily trust the raw value and the library conversion.
               */
             
-			// Calculate Resistance
-			// R_sensor = (Raw / Max_Count) * R_REF / Gain
-			// Assuming 24-bit resolution and R_REF of 5110.0 Ohms (5.11k)
-			// Note: Gain limits max measurable resistance (R_max = R_REF / Gain).
-			// Gain 16 => Max ~319 Ohms. Gain 8 => Max ~638 Ohms.
-			// For PT1000 (1000 Ohms), we need Gain 4 (Max ~1277 Ohms).
-			#define R_REF 5110.0f
-			// #define ADC_GAIN 1.0f
-			#define ADC_GAIN 4.0f
-			// #define ADC_GAIN 16.0f
-			#define ADC_RESOLUTION_BITS 24
-            #define RTD_TC 3850.0f
-            #define R_NOM 1000.0f
-			
-			int32_t max_count = (1 << (ADC_RESOLUTION_BITS - 1)) - 1;
-			// float r_rtd = ((float)buf * R_REF) / (ADC_GAIN * (float)max_count);
-			float r_rtd = (((float)buf - (float)max_count) * R_REF) / (ADC_GAIN * (float)max_count);
-            float temp_c = (r_rtd - R_NOM) / (RTD_TC / R_NOM);
+			const int32_t max_count = (1 << (ADC_RESOLUTION_BITS - 1)) - 1;
+			float r_rtd = (((float)buf - (float)max_count) * RTD_REFERENCE_OHMS) /
+			              (ADC_GAIN * (float)max_count);
+            float temp_c = (r_rtd - RTD_NOMINAL_OHMS) / (RTD_TEMP_COEFFICIENT / RTD_NOMINAL_OHMS);
             float temp_k = temp_c + 273.15f;
 
 
 			// Print to standard output for easy viewing
-			// printf("ADC Channel %d | Raw: %6d | Resistance: %.5f Ohms\n", adc_channel.channel_id, buf, (double)r_rtd);
 			printf("%6d,%.6f,%.6f,%.6f\n", buf, (double)r_rtd, (double)temp_c, (double)temp_k);
 
-			// k_sleep(K_MSEC(100));
 		}
 	}
 
@@ -211,8 +189,6 @@ int main(void)
         printf("Frequency: %.2f Hz\n", (float)sample_count * 1000.0f / (float)duration);
     }
 
-	// 	return 0;
-	// }
     
     // --- Read AD7124 Filter Register AGAIN after loop ---
     if (spi_is_ready_dt(&spi_dev)) {
