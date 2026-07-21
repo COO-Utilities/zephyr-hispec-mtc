@@ -242,8 +242,9 @@ static void handle_enable(float value)
 /*
  * MQTT message callback
  */
-static void on_message(const struct mqtt_publish_param *pub)
+static void on_message(const struct mqtt_publish_param *pub, void *user_data)
 {
+	ARG_UNUSED(user_data);
 	const char *payload = (const char *)pub->message.payload.data;
 	size_t payload_len = pub->message.payload.len;
 
@@ -513,7 +514,7 @@ int main(void)
 	}
 
 	coo_mqtt_add_subscription(TOPIC_CMD, MQTT_QOS_1_AT_LEAST_ONCE);
-	coo_mqtt_set_message_callback(on_message);
+	coo_mqtt_set_message_callback(on_message, NULL);
 
 	LOG_INF("Connecting to MQTT broker...");
 	coo_mqtt_connect(&client);

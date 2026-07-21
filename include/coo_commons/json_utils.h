@@ -9,108 +9,139 @@
 #include <zephyr/data/json.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdarg.h>
 
 /**
  * @file json_utils.h
- * @brief JSON utilities for COO applications
- *
- * This module provides helper functions for structured message handling
- * using JSON format for telemetry, commands, and configuration.
+ * @brief Lightweight JSON convenience wrappers for command handling.
  */
 
-/**
- * @brief Maximum JSON message size
- */
-#define COO_JSON_MAX_SIZE 512
-
-/**
- * @brief Message type enumeration for command/response handling
- */
-enum coo_msg_type {
-	COO_MSG_GET = 0,       /**< GET request */
-	COO_MSG_SET = 1,       /**< SET request */
-	COO_MSG_RESP_OK = 2,   /**< Successful response */
-	COO_MSG_RESP_ERROR = 3 /**< Error response */
+enum coo_json_extract_status {
+	COO_JSON_EXTRACT_MISSING = -1,
+	COO_JSON_EXTRACT_OK = 0,
+	COO_JSON_EXTRACT_ERR = 1,
 };
 
-/**
- * @brief Standard error response strings
- */
-#define COO_JSON_ERR_UNKNOWN      "{\"error\":\"Unknown request\"}"
-#define COO_JSON_ERR_UNSUPPORTED  "{\"error\":\"Unsupported operation\"}"
-#define COO_JSON_ERR_BUSY         "{\"error\":\"Busy\"}"
-#define COO_JSON_ERR_INVALID      "{\"error\":\"Invalid or unrecognized command\"}"
-#define COO_JSON_OK               "{\"status\":\"OK\"}"
+/* Fixed buffer used by coo_json_extract_string_choice(). */
+#define COO_JSON_STRING_CHOICE_MAX 32U
 
-/**
- * @brief Common telemetry message structure
- */
-struct coo_telemetry_msg {
-	/** Timestamp in milliseconds */
-	int64_t timestamp;
-	/** Device/sensor identifier */
-	const char *device_id;
-	/** Temperature value (if applicable) */
-	float temperature;
-	/** Status code */
-	int status;
+struct coo_json_string_choice {
+	const char *name;
+	int value;
 };
 
-/**
- * @brief Encode telemetry message to JSON
- *
- * @param msg Telemetry message structure
- * @param buf Output buffer
- * @param buf_size Size of output buffer
- * @return Number of bytes written, or negative error code
- */
-int coo_json_encode_telemetry(const struct coo_telemetry_msg *msg,
-			       char *buf, size_t buf_size);
+/** Return @p text advanced past ASCII JSON whitespace. */
+const char *coo_json_skip_ws(const char *text);
 
 /**
- * @brief Parse JSON command message
+ * @brief Validate that all top-level object keys are in @p allowed_keys.
  *
- * @param json_str JSON string to parse
- * @param cmd_out Output buffer for command string
- * @param cmd_size Size of command buffer
- * @param value_out Pointer to store numeric value (if present)
- * @return 0 on success, negative error code on failure
+ * @p allowed_keys is a comma-separated list of accepted top-level key names.
+ * NULL or an empty string means no keys are accepted. Nested object/array keys
+ * are skipped; callers that accept nested objects own nested validation.
+ *
+ * @retval 0 JSON is an object and every top-level key is allowed.
+ * @retval -ENOENT A top-level key is not allowed; @p unknown_key receives it
+ *                 when a destination buffer is supplied.
+ * @retval -EINVAL Input is not a valid JSON object for this lightweight check.
+ * @retval -ENOSPC A key does not fit in @p unknown_key.
  */
-int coo_json_parse_command(const char *json_str, char *cmd_out, size_t cmd_size,
-			    float *value_out);
+int coo_json_validate_top_level_keys(const char *json,
+				     const char *allowed_keys,
+				     char *unknown_key,
+				     size_t unknown_key_len);
 
 /**
- * @brief Parse message type from JSON payload
+ * Match @p text against a case-insensitive static string-choice table.
  *
- * Extracts the "msg_type" field from a JSON payload string.
- * Supports case-insensitive "get" and "set" values.
- *
- * Example JSON: {"msg_type": "get", ...}
- *
- * @param payload JSON payload string (null-terminated)
- * @param msg_type_out Pointer to store parsed message type
- * @return true if successfully parsed, false otherwise
+ * This helper only validates the command token and writes the associated
+ * integer value; command modules still own the table and enum meaning.
  */
-bool coo_json_parse_msg_type(const char *payload, enum coo_msg_type *msg_type_out);
+int coo_json_match_string_choice(const char *text,
+				 const struct coo_json_string_choice *choices,
+				 size_t choice_count,
+				 int *value);
 
+/* Return values use enum coo_json_extract_status. */
+int coo_json_extract_bool(const char *json, const char *key, bool *value);
+int coo_json_extract_u32(const char *json, const char *key, uint32_t *value);
+int coo_json_extract_u64(const char *json, const char *key, uint64_t *value);
+/** Extract one required JSON number into a double. */
+int coo_json_extract_double(const char *json, const char *key, double *value);
+/** Extract a JSON number array into @p values. Supports up to 32 doubles. */
+int coo_json_extract_double_array(const char *json, const char *key,
+				  double *values, size_t max_values,
+				  size_t *parsed_len);
 /**
- * @brief Parse a key/value pair separated by slash
+ * @brief Parse an optional bool field.
  *
- * Parses strings in the format "name/setting" into separate components.
- * Useful for hierarchical command keys like "laser1430/flux" or "atten/value".
+ * Missing fields are not errors and leave @p value unchanged. When @p changed
+ * is non-NULL, it is set true only when the field was present.
  *
- * @param key Input string in format "name/setting"
- * @param out_name Buffer to store name component
- * @param max_name Size of out_name buffer
- * @param out_setting Buffer to store setting component
- * @param max_setting Size of out_setting buffer
- * @return 0 on success, negative error code on failure
- *         -1: no slash found
- *         -2: name empty or too long
- *         -3: setting empty or too long
+ * @retval 0 Field was missing or parsed.
+ * @retval -EINVAL Bad arguments or malformed JSON field.
  */
-int coo_json_parse_key_pair(const char *key,
-                             char *out_name, size_t max_name,
-                             char *out_setting, size_t max_setting);
+int coo_json_extract_optional_bool(const char *json, const char *key,
+				   bool *value, bool *changed);
+/**
+ * @brief Parse an optional unsigned integer field.
+ *
+ * Missing fields are not errors and leave @p value unchanged. When @p changed
+ * is non-NULL, it is set true only when the field was present.
+ *
+ * @retval 0 Field was missing or parsed.
+ * @retval -EINVAL Bad arguments or malformed JSON field.
+ */
+int coo_json_extract_optional_u32(const char *json, const char *key,
+				  uint32_t *value, bool *changed);
+/** Parse an optional unsigned integer field into a uint16_t destination. */
+int coo_json_extract_optional_u16(const char *json, const char *key,
+				  uint16_t *value, bool *changed);
+/**
+ * @brief Parse an optional double field and reject values outside a range.
+ *
+ * Missing fields are not errors and leave @p value unchanged. On success with
+ * a present field, @p value is updated and @p changed is set true.
+ *
+ * @retval 0 Field was missing or parsed within range.
+ * @retval -EINVAL Bad arguments, malformed JSON field, or out-of-range value.
+ */
+int coo_json_extract_optional_double_range(const char *json, const char *key,
+					   double *value, bool *changed,
+					   double min_value, double max_value);
+int coo_json_extract_string(const char *json, const char *key, char *out, size_t out_len);
+/**
+ * Extract a JSON string field and match it against a static choice table.
+ *
+ * Return values use enum coo_json_extract_status. Missing fields remain
+ * distinguishable from malformed JSON or unknown values.
+ */
+int coo_json_extract_string_choice(const char *json,
+				   const char *key,
+				   const struct coo_json_string_choice *choices,
+				   size_t choice_count,
+				   int *value);
+/**
+ * @brief Copy a nested JSON object value into @p out.
+ *
+ * This is a bounded helper for command schemas with optional nested objects.
+ * The copied string includes the surrounding braces.
+ */
+int coo_json_extract_object(const char *json, const char *key, char *out, size_t out_len);
+/**
+ * @brief Append formatted JSON text to a fixed buffer.
+ *
+ * Updates @p offset only on success. This is intentionally small and format-
+ * oriented because command telemetry uses static buffers and must avoid
+ * dynamic allocation.
+ */
+int coo_json_append(char *buf, size_t buf_len, size_t *offset,
+		    const char *fmt, ...);
+int coo_json_vappend(char *buf, size_t buf_len, size_t *offset,
+		     const char *fmt, va_list args);
+/** Append a JSON number or null when @p value is NaN. */
+int coo_json_append_float_or_null(char *buf, size_t buf_len, size_t *offset,
+				  double value, int precision);
 
 #endif /* APP_LIB_JSON_UTILS_H_ */

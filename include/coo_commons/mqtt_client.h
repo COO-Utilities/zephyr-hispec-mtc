@@ -10,13 +10,59 @@
 #include <zephyr/kernel.h>
 
 /**
+ * @file mqtt_client.h
+ * @brief Small MQTT 5 wrapper used by HISPEC-TIB.
+ *
+ * The wrapper owns one global broker config, subscription table, RX/TX buffers,
+ * and connection flag. The application still owns when to connect, subscribe,
+ * process, publish responses, and disconnect.
+ */
+
+#define COO_MQTT_BROKER_HOST_MAX 128
+
+struct coo_mqtt_broker_config {
+	char host[COO_MQTT_BROKER_HOST_MAX];
+	uint16_t port;
+};
+
+/**
+ * @brief Parse one MQTT broker endpoint string.
+ *
+ * @param endpoint Endpoint in `<host-or-ip>:<port>` form.
+ * @param cfg Destination broker config.
+ * @return true on valid endpoint, false on malformed host or port.
+ */
+bool coo_mqtt_parse_broker_endpoint(const char *endpoint,
+				    struct coo_mqtt_broker_config *cfg);
+
+/**
+ * @brief Format a broker config as `<host-or-ip>:<port>`.
+ *
+ * @return 0 on success, -ENOSPC if @p out is too small.
+ */
+int coo_mqtt_format_broker_endpoint(const struct coo_mqtt_broker_config *cfg,
+				    char *out, size_t out_len);
+
+/**
+ * @brief Resolve a broker config without changing the active MQTT broker.
+ *
+ * Numeric IPv4 hosts succeed without DNS. Hostnames require DNS support and a
+ * configured resolver that can return an IPv4 address. @p resolved_ip may be
+ * NULL when the caller only needs validation.
+ */
+int coo_mqtt_resolve_broker_config(const struct coo_mqtt_broker_config *cfg,
+				   char *resolved_ip, size_t resolved_ip_len);
+
+/**
  * @brief MQTT message callback function type
  *
  * Called when an MQTT message is received on a subscribed topic.
  *
  * @param pub Pointer to MQTT publish parameters containing topic, payload, QoS, etc.
+ * @param user_data Caller-supplied callback context.
  */
-typedef void (*mqtt_message_cb_t)(const struct mqtt_publish_param *pub);
+typedef void (*mqtt_message_cb_t)(const struct mqtt_publish_param *pub,
+				  void *user_data);
 
 /**
  * @brief Initialize the MQTT client
@@ -31,14 +77,22 @@ typedef void (*mqtt_message_cb_t)(const struct mqtt_publish_param *pub);
 int coo_mqtt_init(struct mqtt_client *client, const char *client_id);
 
 /**
+ * @brief Set broker endpoint for subsequent MQTT connect attempts.
+ *
+ * @param cfg Broker hostname or numeric IPv4 and TCP port.
+ * @return 0 on success, negative errno on invalid config.
+ */
+int coo_mqtt_set_broker_config(const struct coo_mqtt_broker_config *cfg);
+
+/**
  * @brief Connect to the MQTT broker
  *
- * Blocks until connection is established or fails. Automatically retries
- * on failure with exponential backoff.
+ * Attempts a single connect/handshake sequence.
  *
  * @param client Pointer to initialized MQTT client
+ * @return 0 on success, negative error code on failure
  */
-void coo_mqtt_connect(struct mqtt_client *client);
+int coo_mqtt_connect(struct mqtt_client *client);
 
 /**
  * @brief Add a subscription topic
@@ -70,8 +124,9 @@ int coo_mqtt_subscribe(struct mqtt_client *client);
  * subscribed topic.
  *
  * @param cb Callback function pointer
+ * @param user_data Caller-owned pointer passed to cb, or NULL if unused
  */
-void coo_mqtt_set_message_callback(mqtt_message_cb_t cb);
+void coo_mqtt_set_message_callback(mqtt_message_cb_t cb, void *user_data);
 
 /**
  * @brief Process MQTT events
