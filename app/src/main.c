@@ -13,6 +13,7 @@
 #include "../../lib/sensors/sensor_manager.h"
 #include "../../lib/heaters/heater_manager.h"
 #include "../../lib/control/control_loop.h"
+#include "mqtt_interface.h"
 
 LOG_MODULE_REGISTER(main_app, LOG_LEVEL_INF);
 
@@ -204,10 +205,9 @@ int main(void)
 
     /* ========== 6. Optional: Network and Telemetry ========== */
 
-#ifdef CONFIG_NETWORKING
-    LOG_INF("Network support not yet enabled");
-    /* TODO: Initialize coo_commons network */
-    /* TODO: Initialize MQTT telemetry */
+#ifdef CONFIG_COO_COMMANDS_LIB
+    LOG_INF("Starting MQTT command interface...");
+    mqtt_interface_start();
 #endif
 
     /* ========== 7. Supervisor Loop ========== */
