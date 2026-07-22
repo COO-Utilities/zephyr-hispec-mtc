@@ -4,3 +4,12 @@ config COO_SENSORS_LIB
     depends on COO_CONFIG_LIB
     help
       Enable the COO Thermal Controller Sensor Manager library.
+
+config COO_ADC_TEMP_SENSOR
+    bool "AD7124 internal temperature sensor driver"
+    default n
+    depends on COO_SENSORS_LIB && SPI
+    help
+      Raw-SPI driver for the AD7124 on-die temperature sensor. Requires a
+      devicetree node labelled "ad7124". Off by default because that node is
+      not present in every build.
