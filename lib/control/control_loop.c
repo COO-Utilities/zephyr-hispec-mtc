@@ -404,3 +404,37 @@ int control_loop_get_gains(const char *loop_id, float *kp, float *ki, float *kd)
     k_mutex_unlock(&control_mutex);
     return -2;
 }
+
+int control_loop_get_enabled(const char *loop_id, bool *enabled)
+{
+    if (loop_id == NULL || enabled == NULL) {
+        return -1;
+    }
+
+    k_mutex_lock(&control_mutex, K_FOREVER);
+
+    for (int i = 0; i < num_loops; i++) {
+        if (strcmp(loop_state[i].id, loop_id) == 0) {
+            *enabled = loop_state[i].enabled;
+            k_mutex_unlock(&control_mutex);
+            return 0;
+        }
+    }
+
+    k_mutex_unlock(&control_mutex);
+    return -2;
+}
+
+int control_loop_get_count(void)
+{
+    return num_loops;
+}
+
+/* IDs are set once at init and never mutated, so no lock is needed here */
+const char *control_loop_get_id_at(int index)
+{
+    if (index < 0 || index >= num_loops) {
+        return NULL;
+    }
+    return loop_state[index].id;
+}

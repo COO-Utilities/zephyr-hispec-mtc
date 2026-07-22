@@ -1,0 +1,7 @@
+config COO_COMMANDS_LIB
+    bool "COO Thermal command table"
+    depends on COO_CONTROL_LIB && COO_SENSORS_LIB && COO_HEATERS_LIB
+    depends on COO_MQTT && COO_JSON
+    help
+      Thermal controller MQTT/serial command table: registers the ICD command
+      handlers against the coo_commons command dispatcher.

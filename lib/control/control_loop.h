@@ -62,6 +62,14 @@ int control_loop_get_target(const char *loop_id, float *target_kelvin);
 int control_loop_enable(const char *loop_id, bool enable);
 
 /**
+ * Get whether a loop is enabled
+ * @param loop_id Loop ID string
+ * @param enabled Pointer to store the enabled flag
+ * @return 0 on success, negative error code on failure
+ */
+int control_loop_get_enabled(const char *loop_id, bool *enabled);
+
+/**
  * Suspend all control loops (for emergency/alarm conditions)
  * @return 0 on success, negative error code on failure
  */
@@ -99,5 +107,18 @@ int control_loop_set_gains(const char *loop_id, float kp, float ki, float kd);
  * @return 0 on success, negative error code on failure
  */
 int control_loop_get_gains(const char *loop_id, float *kp, float *ki, float *kd);
+
+/**
+ * Get the number of configured control loops
+ * @return loop count
+ */
+int control_loop_get_count(void);
+
+/**
+ * Get the ID of the loop at an index, for enumeration
+ * @param index Loop index in [0, control_loop_get_count())
+ * @return ID string, or NULL if index is out of range
+ */
+const char *control_loop_get_id_at(int index);
 
 #endif /* CONTROL_LOOP_H */
