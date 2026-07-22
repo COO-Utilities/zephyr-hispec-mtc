@@ -62,6 +62,14 @@ int control_loop_get_target(const char *loop_id, float *target_kelvin);
 int control_loop_enable(const char *loop_id, bool enable);
 
 /**
+ * Get whether a loop is enabled
+ * @param loop_id Loop ID string
+ * @param enabled Pointer to store the enabled flag
+ * @return 0 on success, negative error code on failure
+ */
+int control_loop_get_enabled(const char *loop_id, bool *enabled);
+
+/**
  * Suspend all control loops (for emergency/alarm conditions)
  * @return 0 on success, negative error code on failure
  */

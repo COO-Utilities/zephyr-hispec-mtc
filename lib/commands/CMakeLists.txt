@@ -1,0 +1,3 @@
+zephyr_library()
+zephyr_include_directories_ifdef(CONFIG_COO_COMMANDS_LIB .)
+zephyr_library_sources_ifdef(CONFIG_COO_COMMANDS_LIB thermal_commands.c)
