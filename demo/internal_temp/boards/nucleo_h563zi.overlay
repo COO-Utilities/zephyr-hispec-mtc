@@ -1,0 +1,30 @@
+/* AD7124 on SPI1; the custom driver does raw register I/O and only needs the
+ * node's SPI spec, so the channel binding here is nominal. */
+#include <zephyr/dt-bindings/adc/ad7124-adc.h>
+
+&spi1 {
+    status = "okay";
+    pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pg9 &spi1_mosi_pb5>;
+    pinctrl-names = "default";
+    cs-gpios = <&gpiod 14 GPIO_ACTIVE_LOW>;
+
+    ad7124: ad7124@0 {
+        compatible = "adi,ad7124-adc";
+        reg = <0>;
+        spi-max-frequency = <1000000>;
+        active-device = <1>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        #io-channel-cells = <1>;
+
+        channel@0 {
+            reg = <0>;
+            zephyr,gain = "ADC_GAIN_1";
+            zephyr,reference = "ADC_REF_INTERNAL";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,input-positive = <AD7124_ADC_AIN0>;
+            zephyr,input-negative = <AD7124_ADC_AIN1>;
+        };
+    };
+};

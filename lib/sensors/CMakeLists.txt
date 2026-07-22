@@ -1,3 +1,4 @@
 zephyr_library()
 zephyr_include_directories_ifdef(CONFIG_COO_SENSORS_LIB .)
 zephyr_library_sources_ifdef(CONFIG_COO_SENSORS_LIB sensor_manager.c)
+zephyr_library_sources_ifdef(CONFIG_COO_ADC_TEMP_SENSOR adc_temp_sensor.c)
