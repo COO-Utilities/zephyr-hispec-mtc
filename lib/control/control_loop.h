@@ -100,4 +100,17 @@ int control_loop_set_gains(const char *loop_id, float kp, float ki, float kd);
  */
 int control_loop_get_gains(const char *loop_id, float *kp, float *ki, float *kd);
 
+/**
+ * Get the number of configured control loops
+ * @return loop count
+ */
+int control_loop_get_count(void);
+
+/**
+ * Get the ID of the loop at an index, for enumeration
+ * @param index Loop index in [0, control_loop_get_count())
+ * @return ID string, or NULL if index is out of range
+ */
+const char *control_loop_get_id_at(int index);
+
 #endif /* CONTROL_LOOP_H */

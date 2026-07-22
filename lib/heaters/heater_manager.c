@@ -307,3 +307,17 @@ heater_status_t heater_manager_get_status(const char *heater_id)
     k_mutex_unlock(&heater_mutex);
     return status;
 }
+
+int heater_manager_get_count(void)
+{
+    return num_heaters;
+}
+
+/* IDs are set once at init and never mutated, so no lock is needed here */
+const char *heater_manager_get_id_at(int index)
+{
+    if (index < 0 || index >= num_heaters) {
+        return NULL;
+    }
+    return heater_state[index].id;
+}

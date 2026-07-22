@@ -68,4 +68,17 @@ int heater_manager_get_power(const char *heater_id, float *power_percent);
  */
 heater_status_t heater_manager_get_status(const char *heater_id);
 
+/**
+ * Get the number of configured heaters
+ * @return heater count
+ */
+int heater_manager_get_count(void);
+
+/**
+ * Get the ID of the heater at an index, for enumeration
+ * @param index Heater index in [0, heater_manager_get_count())
+ * @return ID string, or NULL if index is out of range
+ */
+const char *heater_manager_get_id_at(int index);
+
 #endif /* HEATER_MANAGER_H */

@@ -247,3 +247,17 @@ bool sensor_manager_is_valid(const char *sensor_id)
     k_mutex_unlock(&sensor_mutex);
     return valid;
 }
+
+int sensor_manager_get_count(void)
+{
+    return num_sensors;
+}
+
+/* IDs are set once at init and never mutated, so no lock is needed here */
+const char *sensor_manager_get_id_at(int index)
+{
+    if (index < 0 || index >= num_sensors) {
+        return NULL;
+    }
+    return sensor_cache[index].id;
+}

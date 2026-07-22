@@ -67,4 +67,17 @@ int sensor_manager_get_average(const char *sensor_ids[], int num_sensors, float 
  */
 bool sensor_manager_is_valid(const char *sensor_id);
 
+/**
+ * Get the number of configured sensors
+ * @return sensor count
+ */
+int sensor_manager_get_count(void);
+
+/**
+ * Get the ID of the sensor at an index, for enumeration
+ * @param index Sensor index in [0, sensor_manager_get_count())
+ * @return ID string, or NULL if index is out of range
+ */
+const char *sensor_manager_get_id_at(int index);
+
 #endif /* SENSOR_MANAGER_H */

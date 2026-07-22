@@ -404,3 +404,17 @@ int control_loop_get_gains(const char *loop_id, float *kp, float *ki, float *kd)
     k_mutex_unlock(&control_mutex);
     return -2;
 }
+
+int control_loop_get_count(void)
+{
+    return num_loops;
+}
+
+/* IDs are set once at init and never mutated, so no lock is needed here */
+const char *control_loop_get_id_at(int index)
+{
+    if (index < 0 || index >= num_loops) {
+        return NULL;
+    }
+    return loop_state[index].id;
+}
