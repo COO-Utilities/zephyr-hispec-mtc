@@ -70,6 +70,14 @@ int control_loop_enable(const char *loop_id, bool enable);
 int control_loop_get_enabled(const char *loop_id, bool *enabled);
 
 /**
+ * Get the last averaged sensor temperature for a loop
+ * @param loop_id Loop ID string
+ * @param temp_kelvin Pointer to store the measured temperature
+ * @return 0 on success, negative error code on failure
+ */
+int control_loop_get_temperature(const char *loop_id, float *temp_kelvin);
+
+/**
  * Suspend all control loops (for emergency/alarm conditions)
  * @return 0 on success, negative error code on failure
  */

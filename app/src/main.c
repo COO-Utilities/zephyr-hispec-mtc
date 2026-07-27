@@ -5,7 +5,10 @@
  * Modular multi-heater, multi-sensor thermal controller with PID loops
  */
 
+#include <string.h>
+
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/adc.h>
 #include <zephyr/logging/log.h>
 
 /* Application modules */
@@ -14,6 +17,33 @@
 #include "../../lib/heaters/heater_manager.h"
 #include "../../lib/control/control_loop.h"
 #include "mqtt_interface.h"
+
+/* Two Penguin PT1000s, 4-wire ratiometric; see demo/penguin_rtd for the wiring.
+ * Named sensor-1/sensor-2 to match the default control loops (prototype). */
+static const struct adc_dt_spec penguin_spec[] = {
+	ADC_DT_SPEC_GET_BY_IDX(DT_ALIAS(penguins), 0),
+	ADC_DT_SPEC_GET_BY_IDX(DT_ALIAS(penguins), 1),
+};
+
+static void configure_penguins(thermal_config_t *config)
+{
+	static const char *const ids[] = { "sensor-1", "sensor-2" };
+
+	config->number_of_sensors = 2;
+	for (int i = 0; i < 2; i++) {
+		sensor_config_t *s = &config->sensors[i];
+
+		strncpy(s->id, ids[i], MAX_ID_LENGTH - 1);
+		s->type = SENSOR_TYPE_P_RTD;
+		s->nominal_resistance = 1000.0f;
+		s->temperature_coefficient = 3850.0f;
+		s->reference_resistance = 10200.0f;   /* 2 * R1; both IOUT share it */
+		s->adc_gain = 1;
+		s->adc_resolution = 24;
+		s->driver_data = &penguin_spec[i];
+		s->enabled = true;
+	}
+}
 
 LOG_MODULE_REGISTER(main_app, LOG_LEVEL_INF);
 
@@ -140,6 +170,8 @@ int main(void)
         LOG_ERR("Failed to load configuration");
         return -1;
     }
+
+    configure_penguins(g_config);
 
     LOG_INF("Configuration loaded:");
     LOG_INF("  Controller ID: %s", g_config->id);

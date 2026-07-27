@@ -68,20 +68,22 @@ static void publish_telemetry(void)
 	for (int i = 0; i < count; i++) {
 		const char *id = control_loop_get_id_at(i);
 		float target_k = 0.0f;
+		float temp_k = 0.0f;
 		bool enabled = false;
 		struct coo_cmd_response out = {0};
 		char suffix[COO_CMD_TOPIC_MAX];
 
 		control_loop_get_target(id, &target_k);
+		control_loop_get_temperature(id, &temp_k);
 		control_loop_get_enabled(id, &enabled);
 		loop_status_t status = control_loop_get_status(id);
 
 		snprintk(suffix, sizeof(suffix), "loop/%s/telemetry", id);
 		out.payload_len = snprintk(
 			out.payload, sizeof(out.payload),
-			"{\"loop_id\":\"%s\",\"setpoint\":%.2f,\"enabled\":%s,\"status\":%d}",
-			id, (double)(target_k - 273.15f), enabled ? "true" : "false",
-			(int)status);
+			"{\"loop_id\":\"%s\",\"temperature\":%.2f,\"setpoint\":%.2f,\"enabled\":%s,\"status\":%d}",
+			id, (double)(temp_k - 273.15f), (double)(target_k - 273.15f),
+			enabled ? "true" : "false", (int)status);
 
 		const struct coo_cmd_runtime_emit_args args = {
 			.type = COO_CMD_RUNTIME_EMIT_DATA,

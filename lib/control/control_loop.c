@@ -27,6 +27,7 @@ static struct {
     /* Setpoint management */
     float target_temp_kelvin;
     float current_setpoint;  /* For ramping */
+    float current_temp_kelvin;  /* Last averaged sensor reading */
 
     /* Alarm thresholds */
     float alarm_min_temp;
@@ -131,11 +132,8 @@ int control_loop_update_all(float dt_seconds)
     k_mutex_lock(&control_mutex, K_FOREVER);
 
     for (int i = 0; i < num_loops; i++) {
-        if (!loop_state[i].enabled || loop_state[i].suspended) {
-            continue;
-        }
-
-        /* Read sensors and calculate average */
+        /* Read sensors for every loop so telemetry shows real temperature even
+         * when the loop is disabled; only control output is gated on enabled. */
         float measured_temp = 0.0f;
         const char *sensor_ids_ptr[MAX_SENSORS_PER_LOOP];
         for (int j = 0; j < loop_state[i].num_sensors; j++) {
@@ -149,6 +147,12 @@ int control_loop_update_all(float dt_seconds)
             loop_state[i].status = LOOP_STATUS_SENSOR_ERROR;
             LOG_WRN("Loop %s: Sensor read error", loop_state[i].id);
             errors++;
+            continue;
+        }
+
+        loop_state[i].current_temp_kelvin = measured_temp;
+
+        if (!loop_state[i].enabled || loop_state[i].suspended) {
             continue;
         }
 
@@ -416,6 +420,26 @@ int control_loop_get_enabled(const char *loop_id, bool *enabled)
     for (int i = 0; i < num_loops; i++) {
         if (strcmp(loop_state[i].id, loop_id) == 0) {
             *enabled = loop_state[i].enabled;
+            k_mutex_unlock(&control_mutex);
+            return 0;
+        }
+    }
+
+    k_mutex_unlock(&control_mutex);
+    return -2;
+}
+
+int control_loop_get_temperature(const char *loop_id, float *temp_kelvin)
+{
+    if (loop_id == NULL || temp_kelvin == NULL) {
+        return -1;
+    }
+
+    k_mutex_lock(&control_mutex, K_FOREVER);
+
+    for (int i = 0; i < num_loops; i++) {
+        if (strcmp(loop_state[i].id, loop_id) == 0) {
+            *temp_kelvin = loop_state[i].current_temp_kelvin;
             k_mutex_unlock(&control_mutex);
             return 0;
         }
