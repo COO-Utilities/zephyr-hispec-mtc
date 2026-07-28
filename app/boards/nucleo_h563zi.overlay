@@ -1,7 +1,17 @@
-/*
- * Devicetree overlay for NUCLEO-H563ZI:
- * - AD7124 ADC on SPI1
- */
+/* Two Penguin PT1000s, 4-wire ratiometric on the AD7124 (Zephyr driver path).
+ * Excitation IOUT0 on each I+ pin, sensed differentially on V+/V-, external
+ * REFIN1 across the 5.1k reference. */
+#include <zephyr/dt-bindings/adc/ad7124-adc.h>
+
+/ {
+    aliases {
+        penguins = &penguins_node;
+    };
+
+    penguins_node: zephyr,user {
+        io-channels = <&ad7124 0>, <&ad7124 1>;
+    };
+};
 
 &spi1 {
     status = "okay";
@@ -10,8 +20,36 @@
     cs-gpios = <&gpiod 14 GPIO_ACTIVE_LOW>;
 
     ad7124: ad7124@0 {
-        compatible = "adi,ad7124";
+        compatible = "adi,ad7124-adc";
         reg = <0>;
-        spi-max-frequency = <5000000>;  /* 5 MHz max for AD7124 */
+        spi-max-frequency = <1000000>;
+        active-device = <1>;
+        refbuf-enable-mask = <0x3>;
+        inbuf-enable-mask = <0x3>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        #io-channel-cells = <1>;
+
+        channel@0 {
+            reg = <0>;
+            zephyr,gain = "ADC_GAIN_1";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,input-positive = <AD7124_ADC_AIN10>;
+            zephyr,input-negative = <AD7124_ADC_AIN9>;
+            zephyr,current-source-pin = [03 08];
+        };
+
+        channel@1 {
+            reg = <1>;
+            zephyr,gain = "ADC_GAIN_1";
+            zephyr,reference = "ADC_REF_EXTERNAL0";
+            zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+            zephyr,resolution = <24>;
+            zephyr,input-positive = <AD7124_ADC_AIN5>;
+            zephyr,input-negative = <AD7124_ADC_AIN6>;
+            zephyr,current-source-pin = [0B 07];
+        };
     };
 };
